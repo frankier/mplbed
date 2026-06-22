@@ -11,15 +11,15 @@ from mplbed.utils import SyncWebSocket
 
 import matplotlib as mpl
 from mplbed.middleware import lifespan as webagg_lifespan, get_current_app
-from mplbed.withshow import (
-    FigureManagerWebAggWithShow,
+from mplbed.webaggext import (
+    FigureManagerWebAggExt,
     FigureCollector,
     new_figure_manager_given_figure,
 )
 
 
 def use_backend():
-    mpl.use("module://mplbed.withshow")
+    mpl.use("module://mplbed.webaggext")
 
 
 managers = {}
@@ -146,7 +146,7 @@ def figure_html(figure, target="inline", app=None, on_close="msg_discrete"):
 
 
 def get_mpl_js(request):
-    js_content = FigureManagerWebAggWithShow.get_javascript()
+    js_content = FigureManagerWebAggExt.get_javascript()
     images_url = request.url_for("webagg:data", path="images/")
     js_content = js_content.replace("'_images/'", f"'{images_url}'")
     return Response(js_content, media_type="application/javascript")
@@ -200,7 +200,6 @@ async def download_fig(request):
 async def handle_websocket(websocket):
     import os
     from mplbed.middleware import get_current_app
-    from mplbed.withshow import consume_figs
     mplbed_profile = "MPLBED_PROFILE" in os.environ
     app = get_current_app()
     fig_id = websocket.path_params["fig_id"]
@@ -259,7 +258,7 @@ async def handle_websocket(websocket):
 
 def get_app():
     routes = [
-        Mount('/_static', app=StaticFiles(directory=FigureManagerWebAggWithShow.get_static_file_path()), name="static"),
+        Mount('/_static', app=StaticFiles(directory=FigureManagerWebAggExt.get_static_file_path()), name="static"),
         Mount('/_data', app=StaticFiles(directory=mpl.get_data_path()), name="data"),
         Route('/mpl.js', get_mpl_js, name="mpl_js"),
         Route('/webaggext.js', get_webaggext_js, name="webaggext_js"),

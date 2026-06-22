@@ -55,13 +55,13 @@ def consume_figs(show_context):
         return cur
 
 
-class FigureManagerWebAggWithShow(FigureManagerWebAgg):
+class FigureManagerWebAggExt(FigureManagerWebAgg):
     _toolbar2_class = NavigationToolbar2WebAgg
 
     def show(self):
         from mplbed.middleware import get_current_app
         from mplbed.starlette_app import add_manager, figure_html_from_id
-        show_context = require_show_context("FigureManagerWebAggWithShow.show")
+        show_context = require_show_context("FigureManagerWebAggExt.show")
         app = get_current_app()
         add_manager(self)
         html = figure_html_from_id(self.num, target=show_context.target, app=app, on_close=show_context.on_close)
@@ -93,11 +93,11 @@ class FigureCollector:
         return figs
 
 
-class FigureCanvasWebAggWithShow(FigureCanvasWebAggCore):
-    manager_class = _api.classproperty(lambda cls: FigureManagerWebAggWithShow)
+class FigureCanvasWebAggExt(FigureCanvasWebAggCore):
+    manager_class = _api.classproperty(lambda cls: FigureManagerWebAggExt)
 
 
 @_Backend.export
-class _BackendWebAggWithShow(_Backend):
-    FigureCanvas = FigureCanvasWebAggWithShow
-    FigureManager = FigureManagerWebAggWithShow
+class _BackendWebAggExt(_Backend):
+    FigureCanvas = FigureCanvasWebAggExt
+    FigureManager = FigureManagerWebAggExt
