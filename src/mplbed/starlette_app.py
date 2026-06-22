@@ -162,6 +162,27 @@ def get_webaggext_js(request):
     return Response(contents, media_type="application/javascript")
 
 
+def figure_page_template(*, head, fig, title):
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    {head}
+    <title>{title}</title>
+</head>
+<body>
+    {fig}
+</body>
+</html>
+"""
+
+
+def figure_page(fig, *, template=figure_page_template, app=None):
+    fig_html = figure_html(fig, app=app, target="body")
+    head = get_head_content(core=True, app=app)
+    resp_html = template(head=head, title="figure", fig=fig_html)
+    return Response(resp_html, media_type='text/html')
+
+
 async def download_fig(request):
     fig_id = request.path_params["fig_id"]
     fmt = request.path_params["fmt"]
