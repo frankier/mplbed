@@ -25,10 +25,11 @@ def use_backend():
 managers = {}
 
 
-def get_head_content(core=False, app=None):
+def get_head_content(*, core=False, app=None):
     if app is None:
         from mplbed.middleware import get_current_app
         app = get_current_app()
+    assert app is not None
     css_files = []
     if not core:
         css_files.extend(["page", "boilerplate", "fbm"])
