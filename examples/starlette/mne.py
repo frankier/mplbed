@@ -45,7 +45,7 @@ def homepage(request):
 
     return Response(
         homepage_template(
-            head=get_head_content(request),
+            head=get_head_content(app=request),
             fig=figure_html(fig, on_close="msg_disable")
         ),
         media_type='text/html'

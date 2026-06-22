@@ -57,7 +57,7 @@ def homepage(request):
     demo = PopupDemoMpl()
     return Response(
         homepage_template(
-            head=get_head_content(request),
+            head=get_head_content(app=request.app),
             fig=demo.into_html()
         ),
         media_type='text/html'

@@ -4,8 +4,11 @@ from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route, Mount
 
-from mplbed import get_head_content, get_app as get_webagg_app, figure_html
+from mplbed import get_head_content, get_app as get_webagg_app, figure_html, use_backend
 from mplbed.utils import composed_lifespan
+
+
+use_backend()
 
 
 def homepage_template(*, head, fig1, fig2):
@@ -48,8 +51,8 @@ def homepage(request):
     return Response(
         homepage_template(
             head=get_head_content(request),
-            fig1=figure_html(request.app, fig1),
-            fig2=figure_html(request.app, fig2),
+            fig1=figure_html(fig1, app=request.app),
+            fig2=figure_html(fig2, app=request.app),
         ),
         media_type='text/html'
     )
