@@ -176,14 +176,18 @@ async def download_fig(request):
 
 
 async def handle_websocket(websocket):
+    import os
     from mplbed.middleware import get_current_app
     from mplbed.withshow import consume_figs
+    mplbed_profile = "MPLBED_PROFILE" in os.environ
     app = get_current_app()
     fig_id = websocket.path_params["fig_id"]
     supports_binary = True
     added = False
     fig_ids = []
     sync_websocket = SyncWebSocket(websocket)
+    if mplbed_profile:
+        profile_counter = 0
     try:
         await websocket.accept()
         async for message in websocket.iter_json():
@@ -200,7 +204,22 @@ async def handle_websocket(websocket):
                 supports_binary = message['value']
             else:
                 with collector:
-                    manager.handle_json(message)
+                    if mplbed_profile:
+                        import pyinstrument
+                        profile_counter += 1
+                        profiler = pyinstrument.Profiler()
+                        profiler.start()
+                    try:
+                        manager.handle_json(message)
+                    finally:
+                        if mplbed_profile:
+                            profiler.stop()
+                            out_path = f"profiles/{fig_id}_{idx}.html"
+                            with open(out_path, "w") as f:
+                                f.write(profiler.output_html())
+                                import os
+                                full_path = os.path.realpath(f.name)
+                                print(f"Wrote profile to {full_path}")
             for fig in collector.consume_many():
                 await websocket.send_json({
                     "type": "newfig",
