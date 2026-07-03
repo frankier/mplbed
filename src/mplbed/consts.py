@@ -1,0 +1,2 @@
+DEFAULT_PREFIX = "/webagg"
+HEAD_TEMPLATE_VARIABLE_NAME = "mplbed_head"

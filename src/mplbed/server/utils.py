@@ -1,24 +1,6 @@
 import asyncio
-from contextlib import asynccontextmanager, AsyncExitStack
 
-from starlette.applications import Starlette
-from starlette.routing import Mount
 from starlette.websockets import WebSocket
-
-
-def composed_lifespan(*lifespans):
-    @asynccontextmanager
-    async def lifespan(app):
-        async with AsyncExitStack() as stack:
-            for inner_lifespan in lifespans:
-                await stack.enter_async_context(inner_lifespan(app))
-            for route in app.routes:
-                if isinstance(route, Mount) and isinstance(route.app, Starlette):
-                    await stack.enter_async_context(
-                        route.app.router.lifespan_context(route.app),
-                    )
-            yield
-    return lifespan
 
 
 class SyncWebSocket:

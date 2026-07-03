@@ -1,14 +1,13 @@
+"""
+Creates two embedded figures using raw string templates using Starlette/mplbed/string formatting.
+"""
 from matplotlib.figure import Figure
 
 from starlette.applications import Starlette
 from starlette.responses import Response
-from starlette.routing import Route, Mount
+from starlette.routing import Route
 
-from mplbed import get_head_content, get_app as get_webagg_app, figure_html, use_backend
-from mplbed.utils import composed_lifespan
-
-
-use_backend()
+from mplbed import mplbed_starlette
 
 
 def homepage_template(*, head, fig1, fig2):
@@ -50,9 +49,8 @@ def homepage(request):
     fig2 = create_figure()
     return Response(
         homepage_template(
-            head=get_head_content(request),
-            fig1=figure_html(fig1, app=request.app),
-            fig2=figure_html(fig2, app=request.app),
+            fig1=mplbed_starlette.figure_standalone(fig1),
+            fig2=mplbed_starlette.figure_standalone(fig2),
         ),
         media_type='text/html'
     )
@@ -60,6 +58,6 @@ def homepage(request):
 
 app = Starlette(
     debug=True,
-    routes=[Route('/', homepage), Mount("/webagg", app=get_webagg_app(), name="webagg")],
-    lifespan=composed_lifespan(),
+    routes=[Route('/', homepage)],
 )
+mplbed_starlette.setup(app)

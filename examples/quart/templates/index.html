@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+        
+{% block content %}
+    <h2 style="font-size: 2em;">Inline figure</h2>
+    {{ inline_fig }}
+
+    <hr style="margin: 5em 0;">
+
+    <h2 style="font-size: 2em;">External iframe</h2>
+    {{ external_iframe }}
+
+    <hr style="margin: 5em 0;">
+
+    <h2 style="font-size: 2em;">Open inline popup</h2>
+    {{ open_inline_popup }}
+{% endblock %}

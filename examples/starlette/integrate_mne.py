@@ -1,14 +1,13 @@
-from matplotlib.figure import Figure
-from matplotlib import pyplot as plt
-
+"""
+Shows how an existing application can be integrated with mplbed. This example
+uses MNE, an EEG/MNE library, to create a figure and then embeds it in a
+Starlette application.
+"""
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
 from starlette.responses import Response
-from starlette.routing import Route, Mount
+from starlette.routing import Route
 
-from mplbed import get_head_content, get_app as get_webagg_app, figure_html, use_backend
-from mplbed.middleware import lifespan as webagg_lifespan
-from mplbed.utils import composed_lifespan
+from mplbed import mplbed_starlette, raw_html
 
 import mne
 
@@ -34,8 +33,6 @@ def homepage_template(*, head, fig):
 
 
 def homepage(request):
-    use_backend()
-
     sample_data_folder = mne.datasets.sample.data_path()
     sample_data_raw_file = (
         sample_data_folder / "MEG" / "sample" / "sample_audvis_filt-0-40_raw.fif"
@@ -45,8 +42,8 @@ def homepage(request):
 
     return Response(
         homepage_template(
-            head=get_head_content(app=request),
-            fig=figure_html(fig, on_close="msg_disable")
+            head=raw_html.head_content(),
+            fig=raw_html.figure_html(fig, on_close="msg_disable")
         ),
         media_type='text/html'
     )
@@ -54,6 +51,6 @@ def homepage(request):
 
 app = Starlette(
     debug=True,
-    routes=[Route('/', homepage), Mount("/webagg", app=get_webagg_app(), name="webagg")],
-    lifespan=webagg_lifespan
+    routes=[Route('/', homepage)],
 )
+mplbed_starlette.setup(app)

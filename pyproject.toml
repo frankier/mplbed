@@ -8,12 +8,15 @@ dependencies = [
     "matplotlib>=3.10.9",
     "starlette>=1.0.0",
     "tornado>=6.5.5",
-    "uvicorn[standard]>=0.46.0",
 ]
 
 [dependency-groups]
 demo = [
   "mne>=1.12.1",
+  "quart",
+  "django",
+  "daphne",
+  "questionary"
 ]
 
 [build-system]

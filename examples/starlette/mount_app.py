@@ -1,14 +1,13 @@
+"""
+Shows manual creation and routing of the `mplbed` Starlette app.
+"""
 from matplotlib.figure import Figure
 
 from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route, Mount
 
-from mplbed import get_head_content, get_app as get_webagg_app, figure_html, use_backend
-from mplbed.utils import composed_lifespan
-
-
-use_backend()
+from mplbed import raw_html, mplbed_starlette, mplbed_app_factory
 
 
 def homepage_template(*, head, fig1):
@@ -16,11 +15,11 @@ def homepage_template(*, head, fig1):
 <html lang="en">
   <head>
     {head}
-    <title>matplotlib</title>
+    <title>Sine wave plot</title>
   </head>
 
   <body>
-    <h2>Figure 1</h2>
+    <h2>Sine wave plot</h2>
     {fig1}
   </body>
 </html>
@@ -41,15 +40,17 @@ def homepage(request):
     fig1 = create_figure()
     return Response(
         homepage_template(
-            head=get_head_content(app=request.app),
-            fig1=figure_html(fig1, app=request.app),
+            head=raw_html.head_content(),
+            fig1=raw_html.figure_html(fig1),
         ),
         media_type='text/html'
     )
 
 
+mplbed_app = mplbed_app_factory()
+MPLBED_PREFIX = "/mymplbedprefix"
 app = Starlette(
     debug=True,
-    routes=[Route('/', homepage), Mount("/webagg", app=get_webagg_app(), name="webagg")],
-    lifespan=composed_lifespan(),
+    routes=[Route('/', homepage), Mount(MPLBED_PREFIX, app=mplbed_app, name="webagg")],
 )
+mplbed_starlette.setup(app, prefix=MPLBED_PREFIX, mplbed_starlette_app=mplbed_app, manage_routing=False)

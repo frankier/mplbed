@@ -59,12 +59,12 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
     _toolbar2_class = NavigationToolbar2WebAgg
 
     def show(self):
-        from mplbed.middleware import get_current_app
-        from mplbed.starlette_app import add_manager, figure_html_from_id
+        from mplbed.asgi import get_asgi_app
+        from mplbed.server.impl import add_manager
+        from mplbed.html.raw import figure_html_from_id
         show_context = require_show_context("FigureManagerWebAggExt.show")
-        app = get_current_app()
         add_manager(self)
-        html = figure_html_from_id(self.num, target=show_context.target, app=app, on_close=show_context.on_close)
+        html = figure_html_from_id(self.num, target=show_context.target,  on_close=show_context.on_close)
         add_fig(html)
 
 
