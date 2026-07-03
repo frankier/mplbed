@@ -39,4 +39,6 @@ async def figure():
     return mplbed_quart.figure_standalone(mk_plot())
 
 
-app.run(debug=True, port=8000)
+if __name__ == "__main__":
+    import os
+    app.run(debug=True, port=int(os.environ.get("PORT", 8000)))
