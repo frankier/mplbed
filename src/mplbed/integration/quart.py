@@ -145,7 +145,7 @@ def setup(
     mplbed_starlette_app_kwargs=None,
     manage_routing=True,
     do_register_context_processor=True,
-    do_use_mpl_b,ackend=True,
+    do_use_mpl_backend=True,
     use_webaggext_backend=True,
 ):
     if do_install_middleware:
