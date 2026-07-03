@@ -78,10 +78,14 @@ def default_figure_page_template(*, head, fig, title):
 </html>
 """
 
-default_figure_page_template.__doc__ = f"""
-Applies the following template to the given `head`, `fig` and `title`:
-{default_figure_page_template(head="{{head}}", fig="{{fig}}", title="{{title}}")}
-"""
+_template_preview = default_figure_page_template(head="{head}", fig="{fig}", title="{title}")
+_indented = "\n".join("    " + line for line in _template_preview.splitlines())
+default_figure_page_template.__doc__ = (
+    "Applies the following template to the given ``head``, ``fig`` and ``title``:\n\n"
+    ".. code-block:: html\n\n"
+    + _indented + "\n"
+)
+del _template_preview, _indented
 
 
 def head_content(*, core=False, prefix_and_app=None):
