@@ -28,18 +28,12 @@ app = mywebframework.App(...)
 setup(app)
 ```
 
-## Install as a library
+## Installation
 
 Currently you can install this package from Github:
 
     $ uv add git+https://github.com/frankier/mplbed
 
-## Run the examples
+## Documentation
 
-The documentation is currently limited to example code.
-
-You can run the examples with the following commands:
-
-    $ uv sync -U --all-groups --all-extras
-    $ cd examples/starlette && uv run uvicorn --port 8001 --workers 1 one_fig:app
-    $ cd examples/starlette && uv run uvicorn --port 8001 --workers 1 demo_popup:app
+The documentation includes [API docs](https://frankier.github.io/mplbed/api.html) and [examples](https://frankier.github.io/mplbed/examples.html).
