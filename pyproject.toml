@@ -18,6 +18,13 @@ demo = [
   "daphne",
   "questionary"
 ]
+docs = [
+    "sphinx>=8",
+    "myst-parser>=4",
+    "sphinx-autodoc-typehints>=2",
+    "furo>=2024",
+    "quart",
+]
 
 [build-system]
 requires = ["uv_build >= 0.11.7, <0.12.0"]
