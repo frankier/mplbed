@@ -25,6 +25,17 @@ docs = [
     "furo>=2024",
     "quart",
 ]
+test = [
+    "pytest>=8",
+    "pytest-playwright>=0.5",
+    "pillow>=10",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "e2e: end-to-end Playwright tests that drive a real browser",
+]
 
 [build-system]
 requires = ["uv_build >= 0.11.7, <0.12.0"]

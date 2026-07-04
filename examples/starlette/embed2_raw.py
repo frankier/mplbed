@@ -7,7 +7,7 @@ from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route
 
-from mplbed import mplbed_starlette
+from mplbed import mplbed_starlette, raw_html
 
 
 def homepage_template(*, head, fig1, fig2):
@@ -49,8 +49,9 @@ def homepage(request):
     fig2 = create_figure()
     return Response(
         homepage_template(
-            fig1=mplbed_starlette.figure_standalone(fig1),
-            fig2=mplbed_starlette.figure_standalone(fig2),
+            head=raw_html.head_content(),
+            fig1=raw_html.figure_html(fig1),
+            fig2=raw_html.figure_html(fig2),
         ),
         media_type='text/html'
     )
