@@ -7,9 +7,8 @@ from starlette.applications import Starlette
 from starlette.responses import Response
 from starlette.routing import Route
 
-from mplbed import mplbed_starlette
+from mplbed import raw_html
 from mplbed.integration.starlette import setup
-from mplbed.asgi import lifespan as webagg_lifespan
 
 
 def homepage_template(*, head, fig):
@@ -48,13 +47,14 @@ class PopupDemoMpl:
         self.popup_fig.show()
 
     def into_html(self):
-        return mplbed_starlette.figure_standalone(self.fig)
+        return raw_html.figure_html(self.fig)
 
 
 def homepage(request):
     demo = PopupDemoMpl()
     return Response(
         homepage_template(
+            head=raw_html.head_content(),
             fig=demo.into_html()
         ),
         media_type='text/html'
@@ -64,6 +64,5 @@ def homepage(request):
 app = Starlette(
     debug=True,
     routes=[Route('/', homepage)],
-    lifespan=webagg_lifespan
 )
 setup(app)
