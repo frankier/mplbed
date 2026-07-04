@@ -90,22 +90,20 @@ def install_middleware(app, *, prefix=DEFAULT_PREFIX, mplbed_starlette_app=None,
     )
 
 
-def register_context_processor(app):
+def register_context_processor(templates: Jinja2Templates):
     """
-    Register a context processor for the given Starlette app to inject head content.
+    Register a context processor for the given Starlette Jinja2Templates instance to inject head content.
 
     Parameters
     ----------
-    app : Starlette
-        The Starlette app to register the context processor on.
+    templates : Jinja2Templates
+        The Jinja2Templates instance to register the context processor on.
     """
-    @app.context_processor
-    async def inject_head_content():
+    def inject_head_content(request):
         return {
             HEAD_TEMPLATE_VARIABLE_NAME: lambda core=False: head_content(core=core),
         }
-
-    return inject_head_content
+    templates.context_processors.append(inject_head_content)
 
 
 @setup_page_docstring(lambda p: f"""
@@ -155,7 +153,7 @@ def setup(
     if do_register_context_processor is None:
         do_register_context_processor = templates is not None
     if do_register_context_processor:
-        register_context_processor(app, templates=templates)
+        register_context_processor(templates)
     if do_use_mpl_backend:
         from mplbed import webaggext
         webaggext.use(ext=use_webaggext_backend)

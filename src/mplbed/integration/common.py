@@ -1,5 +1,6 @@
 from functools import wraps
 import inspect
+from typing import Any, Dict
 
 
 def figure_standalone_docstring_factory(*, response_name, template_comment, is_async, params_extra):
@@ -126,46 +127,49 @@ def figure_page_factory(
     ds_template_comment="a template",
     ds_params_extra,
 ):
+    from frozendict import frozendict
     needs_async = inspect.iscoroutinefunction(figure_standalone)
     def figure_page(inner, **figure_page_kwargs):
         if inspect.iscoroutinefunction(inner):
             if _has_parameters(inner):
                 # Async view style figure creating function
                 @wraps(inner)
-                async def wrapper(*args, **kwargs):
+                async def async_view_wrapper(*args, **kwargs):
                     actual_fig = await inner(*args, **kwargs)
-                    figure_standalone_kwargs = kwargs.pop("figure_standalone_kwargs", {})
+                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop("figure_standalone_kwargs", {})
                     if needs_async:
                         return await figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
                     else:
                         return figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                wrapper = async_view_wrapper
             else:
                 # Async closure style figure creating function
                 @wraps(inner)
-                async def wrapper(*, figure_standalone_kwargs=()):
+                async def async_closure_wrapper(*, figure_standalone_kwargs=frozendict()):
                     actual_fig = await inner()
                     if needs_async:
                         return await figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
                     else:
                         return figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
-
+                wrapper = async_closure_wrapper
         else:
             if needs_async:
                 raise ValueError(f"Decorated function must be async for {name} (wrapping {figure_standalone.__name__})")
             if _has_parameters(inner):
                 # View style figure creating function
                 @wraps(inner)
-                def wrapper(*args, **kwargs):
+                def view_wrapper(*args, **kwargs):
                     actual_fig = figure_standalone(*args, **kwargs)
-                    figure_standalone_kwargs = kwargs.pop("figure_standalone_kwargs", {})
+                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop("figure_standalone_kwargs", {})
                     return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                wrapper = view_wrapper
             else:
                 # Closure style figure creating function
                 @wraps(inner)
-                def wrapper(*, figure_standalone_kwargs=()):
+                def closure_wrapper(*, figure_standalone_kwargs=frozendict()):
                     actual_fig = figure_standalone()
                     return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
-
+                wrapper = closure_wrapper
         wrapper.__name__ = name
         return wrapper
     figure_page.__doc__ = figure_page_docstring_factory(

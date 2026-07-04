@@ -59,6 +59,11 @@ async def download_fig(request):
 async def handle_websocket(websocket):
     import os
     mplbed_profile = "MPLBED_PROFILE" in os.environ
+    if mplbed_profile:
+        try:
+            import pyinstrument  # ty: ignore[unresolved-import]
+        except ImportError:
+            mplbed_profile = False
     fig_id = websocket.path_params["fig_id"]
     supports_binary = True
     added = False
@@ -83,7 +88,6 @@ async def handle_websocket(websocket):
             else:
                 with collector:
                     if mplbed_profile:
-                        import pyinstrument
                         profile_counter += 1
                         profiler = pyinstrument.Profiler()
                         profiler.start()
@@ -92,7 +96,7 @@ async def handle_websocket(websocket):
                     finally:
                         if mplbed_profile:
                             profiler.stop()
-                            out_path = f"profiles/{fig_id}_{idx}.html"
+                            out_path = f"profiles/{fig_id}_{profile_counter}.html"
                             with open(out_path, "w") as f:
                                 f.write(profiler.output_html())
                                 import os
@@ -148,6 +152,7 @@ def mplbed_app_factory(*, enable_status_page=False, status_page_auth: MplPageAut
         Route('/download/{fig_id:int}.{fmt}', download_fig, name="download_fig"),
     ]
     if enable_status_page:
+        assert status_page_auth is not None
         routes.append(Route('/status', lambda *args, **kwargs: status_page_auth(handle_status_page, *args, **kwargs), name="status"))
     app = Starlette(routes=routes)
     return app

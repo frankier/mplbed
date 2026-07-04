@@ -5,6 +5,7 @@ description = "Integrate Matplotlib's WebAgg backend with Starlette for real-tim
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "frozendict>=2.4.7",
     "matplotlib>=3.10.9",
     "starlette>=1.0.0",
     "tornado>=6.5.5",
