@@ -15,7 +15,7 @@ class DotAccessDict(dict[str, Any]):
     __getattr__ = dict.get
 
 
-PARAMS_DS = DotAccessDict(
+PARAMS_DS: Any = DotAccessDict(
     prefix = fdf(f"""
     prefix : str, optional
         The URL prefix for the routes handleded by `mplbed`. Default is '{DEFAULT_PREFIX}'.
@@ -29,13 +29,13 @@ PARAMS_DS = DotAccessDict(
     {name} : dict, optional
         Keyword arguments to pass to the Mplbed app factory if `mplbed_starlette_app` is not provided.
     """),
-    manage_routing = fdf(f"""
+    manage_routing = fdf("""
     manage_routing : bool, optional
         Whether the ASGI middleware should manage routing. Default is True.
         If you set this to False, you are responsible for routing requests to
         the Mplbed app under the given `prefix`.
     """),
-    native_app = fdf(f"""
+    native_app = fdf("""
     native_app : Any, optional
         The native app, e.g. the `Starlette` or `Quart` instance, which will
         typically be saved in cased it is needed by the specific integration,
