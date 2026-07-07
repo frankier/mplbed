@@ -45,7 +45,6 @@ def get_webaggext_js(request):
 async def download_fig(request):
     fig_id = request.path_params["fig_id"]
     fmt = request.path_params["fmt"]
-    app = request.app
     if fig_id not in managers:
         raise HTTPException(status_code=404, detail="Figure not found; It may have expired.")
     manager = managers[fig_id]
@@ -65,7 +64,8 @@ async def handle_websocket(websocket):
         except ImportError:
             mplbed_profile = False
     fig_id = websocket.path_params["fig_id"]
-    supports_binary = True
+    # TOOD: Make use of this?
+    supports_binary = True   # noqa: F841
     added = False
     fig_ids = []
     sync_websocket = SyncWebSocket(websocket)
@@ -84,7 +84,7 @@ async def handle_websocket(websocket):
                 added = True
             collector = FigureCollector(target="modal", on_close="remove_dialog")
             if message['type'] == 'supports_binary':
-                supports_binary = message['value']
+                supports_binary = message['value']   # noqa: F841
             else:
                 with collector:
                     if mplbed_profile:
@@ -124,11 +124,6 @@ def handle_status_page(request):
 class MplPageAuth(metaclass=ABCMeta):
     def __call__(self, *args, **kwargs):
         ...
-
-
-class ExternalStatusPageAuth(MplPageAuth):
-    def __call__(self, handler, *args, **kwargs):
-        return handler(*args, **kwargs)
 
 
 class ExternalStatusPageAuth(MplPageAuth):

@@ -1,6 +1,6 @@
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Tuple, Any, Optional, List
+from typing import Tuple, Optional, List
 
 
 from matplotlib import _api
@@ -59,7 +59,6 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
     _toolbar2_class = NavigationToolbar2WebAgg
 
     def show(self):
-        from mplbed.asgi import get_asgi_app
         from mplbed.server.impl import add_manager
         from mplbed.html.raw import figure_html_from_id
         show_context = require_show_context("FigureManagerWebAggExt.show")
