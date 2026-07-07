@@ -1,11 +1,16 @@
 from mplbed.asgi import url_path_for
 
 
-def figure_html_from_id(fig_id, *, target="inline", on_close="msg_discrete", prefix_and_app=None):
+def figure_html_from_id(
+    fig_id, *, target="inline", on_close="msg_discrete", prefix_and_app=None
+):
     from json import dumps
+
     ws_uri = url_path_for("websocket", fig_id=fig_id, _prefix_and_app=prefix_and_app)
     ws_uri_str = dumps(ws_uri)
-    download_fig_uri = url_path_for("download_fig", fig_id=fig_id, fmt="{fmt}", _prefix_and_app=prefix_and_app)
+    download_fig_uri = url_path_for(
+        "download_fig", fig_id=fig_id, fmt="{fmt}", _prefix_and_app=prefix_and_app
+    )
     download_fig_uri_str = dumps(download_fig_uri)
     container = ""
     setup_container = ""
@@ -15,17 +20,13 @@ def figure_html_from_id(fig_id, *, target="inline", on_close="msg_discrete", pre
     elif target == "body":
         target_js = "document.body"
     elif target == "modal":
-        container = (
-            """
+        container = """
             <dialog closedby="any" style="padding: 1em; margin: 0 auto;"></dialog>
             """.strip()
-        )
         target_js = "document.currentScript.previousElementSibling"
-        setup_container = (
-            """
+        setup_container = """
             _mpl_webaggext.mk_modal(document.currentScript.previousElementSibling, fig);
             """.strip()
-        )
     else:
         raise ValueError(f"Invalid target: {target}")
     if on_close == "remove_dialog":
@@ -51,7 +52,7 @@ def figure_html_from_id(fig_id, *, target="inline", on_close="msg_discrete", pre
         """
         })();
         </script>
-        """.strip()
+        """.strip(),
     )
     return "\n".join(bits)
 
@@ -78,12 +79,14 @@ def default_figure_page_template(*, head, fig, title):
 </html>
 """
 
-_template_preview = default_figure_page_template(head="{head}", fig="{fig}", title="{title}")
+
+_template_preview = default_figure_page_template(
+    head="{head}", fig="{fig}", title="{title}"
+)
 _indented = "\n".join("    " + line for line in _template_preview.splitlines())
 default_figure_page_template.__doc__ = (
     "Applies the following template to the given ``head``, ``fig`` and ``title``:\n\n"
-    ".. code-block:: html\n\n"
-    + _indented + "\n"
+    ".. code-block:: html\n\n" + _indented + "\n"
 )
 del _template_preview, _indented
 
@@ -95,21 +98,28 @@ def head_content(*, core=False, prefix_and_app=None):
     css_files.append("mpl")
     head_bits = []
     for css_file in css_files:
-        static_url = url_path_for("static", path=f"css/{css_file}.css", _prefix_and_app=prefix_and_app)
+        static_url = url_path_for(
+            "static", path=f"css/{css_file}.css", _prefix_and_app=prefix_and_app
+        )
         head_bits.append(
             f"""
-                <link rel="stylesheet" href="{ static_url }" type="text/css">
+                <link rel="stylesheet" href="{static_url}" type="text/css">
             """.strip()
         )
     mpl_js_uri = url_path_for("mpl_js", _prefix_and_app=prefix_and_app)
-    head_bits.append(f"""
-        <script src="{ mpl_js_uri }"></script>
-    """.strip())
+    head_bits.append(
+        f"""
+        <script src="{mpl_js_uri}"></script>
+    """.strip()
+    )
     webaggext_js_uri = url_path_for("webaggext_js", _prefix_and_app=prefix_and_app)
-    head_bits.append(f"""
-        <script src="{ webaggext_js_uri }"></script>
-    """.strip())
-    head_bits.append("""
+    head_bits.append(
+        f"""
+        <script src="{webaggext_js_uri}"></script>
+    """.strip()
+    )
+    head_bits.append(
+        """
         <style>
         .mpl-toolbar {
             position: relative;
@@ -128,7 +138,8 @@ def head_content(*, core=False, prefix_and_app=None):
             flex-direction: column;
         }
         </style>
-    """.strip())
+    """.strip()
+    )
     return "\n".join(head_bits)
 
 

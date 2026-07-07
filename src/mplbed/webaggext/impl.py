@@ -4,7 +4,11 @@ from typing import Tuple, Optional, List
 
 
 from matplotlib import _api
-from matplotlib.backends.backend_webagg_core import FigureCanvasWebAggCore, FigureManagerWebAgg, NavigationToolbar2WebAgg
+from matplotlib.backends.backend_webagg_core import (
+    FigureCanvasWebAggCore,
+    FigureManagerWebAgg,
+    NavigationToolbar2WebAgg,
+)
 from matplotlib.backend_bases import _Backend
 
 
@@ -26,7 +30,9 @@ class NoShowContextError(ValueError):
 
 _new_figs_global: List[str] = []
 _new_figs_local: ContextVar[Tuple[str, ...]] = ContextVar("_new_figs", default=())
-_current_show_context: ContextVar[Optional[ShowContext]] = ContextVar('current_scope', default=None)
+_current_show_context: ContextVar[Optional[ShowContext]] = ContextVar(
+    "current_scope", default=None
+)
 
 
 def require_show_context(funcname):
@@ -61,9 +67,12 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
     def show(self):
         from mplbed.server.impl import add_manager
         from mplbed.html.raw import figure_html_from_id
+
         show_context = require_show_context("FigureManagerWebAggExt.show")
         add_manager(self)
-        html = figure_html_from_id(self.num, target=show_context.target,  on_close=show_context.on_close)
+        html = figure_html_from_id(
+            self.num, target=show_context.target, on_close=show_context.on_close
+        )
         add_fig(html)
 
 
