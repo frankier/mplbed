@@ -23,9 +23,13 @@ jobs:
         run: |
           uv tool install ty
 
+      - name: Sync uv
+        run: |
+          uv sync --all-groups --all-extras
+
       - name: Run ty
         run: |
-          ty check ./src
+          uv run ty check ./src
 
   lint_python:
     name: Style check Python
