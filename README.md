@@ -37,3 +37,27 @@ Currently you can install this package from Github:
 ## Documentation
 
 The documentation includes [API docs](https://frankier.github.io/mplbed/api.html) and [examples](https://frankier.github.io/mplbed/examples.html).
+
+## Contributing
+
+Contributions are welcome. Please discuss any larger changes in the issues
+before making a pull request to avoid wasted work. You, the human contributor,
+must personally have reviewed and understood any code submitted.
+
+Set up a dev environment with [uv](https://docs.astral.sh/uv/):
+
+    $ uv sync --all-groups --all-extras
+
+Run the tests (end-to-end tests need Playwright browsers: `uv run playwright install chromium`):
+
+    $ uv run pytest
+
+Lint, format and typecheck:
+
+    $ uv run ruff check ./src
+    $ uv run ruff format ./src
+    $ uv run ty check ./src
+
+Install the [prek](https://prek.j178.dev/) hook to run these automatically on commit:
+
+    $ prek install

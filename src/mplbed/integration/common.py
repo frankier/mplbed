@@ -1,8 +1,11 @@
 from functools import wraps
 import inspect
+from typing import Any, Dict
 
 
-def figure_standalone_docstring_factory(*, response_name, template_comment, is_async, params_extra):
+def figure_standalone_docstring_factory(
+    *, response_name, template_comment, is_async, params_extra
+):
     async_str = "async " if is_async else ""
     await_str = "await " if is_async else ""
     return f"""
@@ -23,10 +26,14 @@ def figure_standalone_docstring_factory(*, response_name, template_comment, is_a
     """
 
 
-def figure_page_docstring_factory(*, response_name, template_comment, is_generic, wraps, params_extra):
+def figure_page_docstring_factory(
+    *, response_name, template_comment, is_generic, wraps, params_extra
+):
     async_str = "(async) " if is_generic else ""
     await_str = "(await) " if is_generic else ""
-    generic_note = "All usages are generic with regards to async/sync" if is_generic else ""
+    generic_note = (
+        "All usages are generic with regards to async/sync" if is_generic else ""
+    )
     return f"""
     Decorator to create a {response_name} object containing the HTML for the given figure using {template_comment}.
 
@@ -81,11 +88,16 @@ def figure_standalone_factory(
     ds_template_comment="a template",
     ds_params_extra,
 ):
-    need_async = inspect.iscoroutinefunction(generate_html) or inspect.iscoroutinefunction(response_factory)
+    need_async = inspect.iscoroutinefunction(
+        generate_html
+    ) or inspect.iscoroutinefunction(response_factory)
     if make_async is None:
         make_async = need_async
     if need_async and not make_async:
-        raise ValueError("generate_html or response_factory is async, but make_async is False. Set make_async to True to allow async usage.")
+        raise ValueError(
+            "generate_html or response_factory is async, but make_async is False. Set make_async to True to allow async usage."
+        )
+
     def process_kwargs(kwargs):
         kwargs = {**(kwarg_defaults or {}), **kwargs}
         response_factory_kwargs = {}
@@ -93,7 +105,9 @@ def figure_standalone_factory(
             if k in kwargs:
                 response_factory_kwargs[k] = kwargs.pop(k)
         return kwargs, response_factory_kwargs
+
     if make_async:
+
         async def figure_standalone(fig, **kwargs):
             generate_html_kwargs, response_factory_kwargs = process_kwargs(kwargs)
             if inspect.iscoroutinefunction(generate_html):
@@ -105,15 +119,19 @@ def figure_standalone_factory(
             else:
                 return response_factory(html, **response_factory_kwargs)
     else:
+
         def figure_standalone(fig, **kwargs):
             generate_html_kwargs, response_factory_kwargs = process_kwargs(kwargs)
-            return response_factory(generate_html(fig, **generate_html_kwargs), **response_factory_kwargs)
+            return response_factory(
+                generate_html(fig, **generate_html_kwargs), **response_factory_kwargs
+            )
+
     figure_standalone.__name__ = name
     figure_standalone.__doc__ = figure_standalone_docstring_factory(
         response_name=ds_response_name,
         template_comment=ds_template_comment,
         is_async=make_async,
-        params_extra=ds_params_extra
+        params_extra=ds_params_extra,
     )
     return figure_standalone
 
@@ -126,54 +144,88 @@ def figure_page_factory(
     ds_template_comment="a template",
     ds_params_extra,
 ):
+    from frozendict import frozendict
+
     needs_async = inspect.iscoroutinefunction(figure_standalone)
+
     def figure_page(inner, **figure_page_kwargs):
         if inspect.iscoroutinefunction(inner):
             if _has_parameters(inner):
                 # Async view style figure creating function
                 @wraps(inner)
-                async def wrapper(*args, **kwargs):
+                async def async_view_wrapper(*args, **kwargs):
                     actual_fig = await inner(*args, **kwargs)
-                    figure_standalone_kwargs = kwargs.pop("figure_standalone_kwargs", {})
+                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop(
+                        "figure_standalone_kwargs", {}
+                    )
                     if needs_async:
-                        return await figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                        return await figure_standalone(
+                            actual_fig,
+                            **{**figure_page_kwargs, **figure_standalone_kwargs},
+                        )
                     else:
-                        return figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                        return figure_standalone(
+                            actual_fig,
+                            **{**figure_page_kwargs, **figure_standalone_kwargs},
+                        )
+
+                wrapper = async_view_wrapper
             else:
                 # Async closure style figure creating function
                 @wraps(inner)
-                async def wrapper(*, figure_standalone_kwargs=()):
+                async def async_closure_wrapper(
+                    *, figure_standalone_kwargs=frozendict()
+                ):
                     actual_fig = await inner()
                     if needs_async:
-                        return await figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                        return await figure_standalone(
+                            actual_fig,
+                            **{**figure_page_kwargs, **figure_standalone_kwargs},
+                        )
                     else:
-                        return figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                        return figure_standalone(
+                            actual_fig,
+                            **{**figure_page_kwargs, **figure_standalone_kwargs},
+                        )
 
+                wrapper = async_closure_wrapper
         else:
             if needs_async:
-                raise ValueError(f"Decorated function must be async for {name} (wrapping {figure_standalone.__name__})")
+                raise ValueError(
+                    f"Decorated function must be async for {name} (wrapping {figure_standalone.__name__})"
+                )
             if _has_parameters(inner):
                 # View style figure creating function
                 @wraps(inner)
-                def wrapper(*args, **kwargs):
+                def view_wrapper(*args, **kwargs):
                     actual_fig = figure_standalone(*args, **kwargs)
-                    figure_standalone_kwargs = kwargs.pop("figure_standalone_kwargs", {})
-                    return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop(
+                        "figure_standalone_kwargs", {}
+                    )
+                    return figure_page(
+                        actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs}
+                    )
+
+                wrapper = view_wrapper
             else:
                 # Closure style figure creating function
                 @wraps(inner)
-                def wrapper(*, figure_standalone_kwargs=()):
+                def closure_wrapper(*, figure_standalone_kwargs=frozendict()):
                     actual_fig = figure_standalone()
-                    return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                    return figure_page(
+                        actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs}
+                    )
 
+                wrapper = closure_wrapper
         wrapper.__name__ = name
         return wrapper
+
     figure_page.__doc__ = figure_page_docstring_factory(
         response_name=ds_response_name,
         template_comment=ds_template_comment,
         wraps=figure_standalone.__name__,
         is_generic=not needs_async,
-        params_extra=ds_params_extra
+        params_extra=ds_params_extra,
     )
     return figure_page
 
@@ -187,9 +239,11 @@ def mk_figure_page_variants(
     response_factory_kwarg_keys=(),
     ds_response_name="response",
     ds_template_comment="a template",
-    ds_params_extra
+    ds_params_extra,
 ):
-    need_async = inspect.iscoroutinefunction(generate_html) or inspect.iscoroutinefunction(response_factory)
+    need_async = inspect.iscoroutinefunction(
+        generate_html
+    ) or inspect.iscoroutinefunction(response_factory)
     results = {}
     standalone_args = dict(
         generate_html=generate_html,
@@ -198,24 +252,20 @@ def mk_figure_page_variants(
         response_factory_kwarg_keys=response_factory_kwarg_keys,
         ds_response_name=ds_response_name,
         ds_template_comment=ds_template_comment,
-        ds_params_extra=ds_params_extra
+        ds_params_extra=ds_params_extra,
     )
     page_args = dict(
         ds_response_name=ds_response_name,
         ds_template_comment=ds_template_comment,
-        ds_params_extra=ds_params_extra
+        ds_params_extra=ds_params_extra,
     )
     if need_async:
         figure_standalone = figure_standalone_factory(
-            f"figure_standalone{suffix}",
-            **standalone_args,
-            make_async=True
+            f"figure_standalone{suffix}", **standalone_args, make_async=True
         )
-        results[f"figure_standalone{suffix}"] = figure_standalone 
+        results[f"figure_standalone{suffix}"] = figure_standalone
         results[f"figure_page{suffix}"] = figure_page_factory(
-            f"figure_page{suffix}",
-            figure_standalone,
-            **page_args
+            f"figure_page{suffix}", figure_standalone, **page_args
         )
     else:
         figure_standalone = figure_standalone_factory(
@@ -223,22 +273,16 @@ def mk_figure_page_variants(
             **standalone_args,
             make_async=False,
         )
-        results[f"figure_standalone{suffix}"] = figure_standalone 
+        results[f"figure_standalone{suffix}"] = figure_standalone
         results[f"figure_page{suffix}"] = figure_page_factory(
-            f"figure_page{suffix}",
-            figure_standalone,
-            **page_args
+            f"figure_page{suffix}", figure_standalone, **page_args
         )
         figure_standalone_async = figure_standalone_factory(
-            f"figure_standalone{suffix}_async",
-            **standalone_args,
-            make_async=True
+            f"figure_standalone{suffix}_async", **standalone_args, make_async=True
         )
         results[f"figure_standalone{suffix}_async"] = figure_standalone_async
         results[f"figure_page{suffix}_async"] = figure_page_factory(
-            f"figure_page{suffix}_async",
-            figure_standalone_async,
-            **page_args
+            f"figure_page{suffix}_async", figure_standalone_async, **page_args
         )
     return results
 
@@ -247,24 +291,27 @@ def setup_page_docstring(template_func):
     from mplbed.doc_helpers import fdf, PARAMS_DS, DotAccessDict
 
     def decorator(wrapped):
-        wrapped.__doc__ = template_func(DotAccessDict(
-            **PARAMS_DS,
-            do_install_middleware=fdf("""
+        wrapped.__doc__ = template_func(
+            DotAccessDict(
+                **PARAMS_DS,
+                do_install_middleware=fdf("""
             do_install_middleware : bool, optional
                 Whether to install the mplbed middleware on the given app. Default is True.
             """),
-            do_register_context_processor=fdf("""
+                do_register_context_processor=fdf("""
             do_register_context_processor : bool, optional
                 Whether to register the mplbed context processor on the given app. Default is True.
             """),
-            do_use_mpl_backend=fdf("""
+                do_use_mpl_backend=fdf("""
             do_use_mpl_backend : bool, optional
                 Whether to setup the matplotlib backend for rendering figures. Default is True.
             """),
-            use_webaggext_backend=fdf("""
+                use_webaggext_backend=fdf("""
             use_webaggext_backend : bool, optional
                 Whether to use webaggext rather than the basic webagg backend for rendering figures. Default is True.
-            """)
-        ))
+            """),
+            )
+        )
         return wrapped
+
     return decorator

@@ -26,6 +26,7 @@ def add_manager(manager):
 
 def get_mpl_js(request):
     from mplbed.asgi import url_path_for
+
     js_content = FigureManagerWebAggExt.get_javascript()
     images_url = url_path_for("data", path="images/")
     js_content = js_content.replace("'_images/'", f"'{images_url}'")
@@ -36,7 +37,7 @@ def get_webaggext_js(request):
     from importlib import resources as impresources
     import mplbed
 
-    js_file = impresources.files(mplbed) / 'webaggext' / 'webaggext.js'
+    js_file = impresources.files(mplbed) / "webaggext" / "webaggext.js"
     with js_file.open() as f:
         contents = f.read()
     return Response(contents, media_type="application/javascript")
@@ -45,22 +46,30 @@ def get_webaggext_js(request):
 async def download_fig(request):
     fig_id = request.path_params["fig_id"]
     fmt = request.path_params["fmt"]
-    app = request.app
     if fig_id not in managers:
-        raise HTTPException(status_code=404, detail="Figure not found; It may have expired.")
+        raise HTTPException(
+            status_code=404, detail="Figure not found; It may have expired."
+        )
     manager = managers[fig_id]
     buff = io.BytesIO()
     manager.canvas.figure.savefig(buff, format=fmt)
     resp_text = buff.getvalue()
-    media_type = mimetypes.types_map.get(fmt, 'binary')
+    media_type = mimetypes.types_map.get(fmt, "binary")
     return Response(resp_text, media_type=media_type)
 
 
 async def handle_websocket(websocket):
     import os
+
     mplbed_profile = "MPLBED_PROFILE" in os.environ
+    if mplbed_profile:
+        try:
+            import pyinstrument  # ty: ignore[unresolved-import]
+        except ImportError:
+            mplbed_profile = False
     fig_id = websocket.path_params["fig_id"]
-    supports_binary = True
+    # TOOD: Make use of this?
+    supports_binary = True  # noqa: F841
     added = False
     fig_ids = []
     sync_websocket = SyncWebSocket(websocket)
@@ -78,12 +87,11 @@ async def handle_websocket(websocket):
                 manager.add_web_socket(sync_websocket)
                 added = True
             collector = FigureCollector(target="modal", on_close="remove_dialog")
-            if message['type'] == 'supports_binary':
-                supports_binary = message['value']
+            if message["type"] == "supports_binary":
+                supports_binary = message["value"]  # noqa: F841
             else:
                 with collector:
                     if mplbed_profile:
-                        import pyinstrument
                         profile_counter += 1
                         profiler = pyinstrument.Profiler()
                         profiler.start()
@@ -92,19 +100,20 @@ async def handle_websocket(websocket):
                     finally:
                         if mplbed_profile:
                             profiler.stop()
-                            out_path = f"profiles/{fig_id}_{idx}.html"
+                            out_path = f"profiles/{fig_id}_{profile_counter}.html"
                             with open(out_path, "w") as f:
                                 f.write(profiler.output_html())
                                 import os
+
                                 full_path = os.path.realpath(f.name)
                                 print(f"Wrote profile to {full_path}")
             for fig in collector.consume_many():
-                await websocket.send_json({
-                    "type": "newfig",
-                    "payload": fig
-                })
+                await websocket.send_json({"type": "newfig", "payload": fig})
     finally:
-        if websocket.client_state != WebSocketState.DISCONNECTED and websocket.application_state != WebSocketState.DISCONNECTED:
+        if (
+            websocket.client_state != WebSocketState.DISCONNECTED
+            and websocket.application_state != WebSocketState.DISCONNECTED
+        ):
             await websocket.close()
         for fig_id in fig_ids:
             if fig_id is not None and fig_id in managers:
@@ -118,8 +127,7 @@ def handle_status_page(request):
 
 
 class MplPageAuth(metaclass=ABCMeta):
-    def __call__(self, *args, **kwargs):
-        ...
+    def __call__(self, *args, **kwargs): ...
 
 
 class ExternalStatusPageAuth(MplPageAuth):
@@ -127,27 +135,46 @@ class ExternalStatusPageAuth(MplPageAuth):
         return handler(*args, **kwargs)
 
 
-class ExternalStatusPageAuth(MplPageAuth):
-    def __call__(self, handler, *args, **kwargs):
-        return handler(*args, **kwargs)
-
-
-def mplbed_app_factory(*, enable_status_page=False, status_page_auth: MplPageAuth | None = None):
+def mplbed_app_factory(
+    *, enable_status_page=False, status_page_auth: MplPageAuth | None = None
+):
     from os.path import realpath
+
     if enable_status_page:
         if status_page_auth is None:
-            raise ValueError("status_page_auth must be provided when enable_status_page is True")
+            raise ValueError(
+                "status_page_auth must be provided when enable_status_page is True"
+            )
         if not isinstance(status_page_auth, MplPageAuth):
             raise ValueError("status_page_auth must be an subclass of StatusPageAuth")
     routes = [
-        Mount('/_static', app=StaticFiles(directory=realpath(FigureManagerWebAggExt.get_static_file_path())), name="static"),
-        Mount('/_data', app=StaticFiles(directory=realpath(mpl.get_data_path())), name="data"),
-        Route('/mpl.js', get_mpl_js, name="mpl_js"),
-        Route('/webaggext.js', get_webaggext_js, name="webaggext_js"),
-        WebSocketRoute('/ws/{fig_id:int}', handle_websocket, name="websocket"),
-        Route('/download/{fig_id:int}.{fmt}', download_fig, name="download_fig"),
+        Mount(
+            "/_static",
+            app=StaticFiles(
+                directory=realpath(FigureManagerWebAggExt.get_static_file_path())
+            ),
+            name="static",
+        ),
+        Mount(
+            "/_data",
+            app=StaticFiles(directory=realpath(mpl.get_data_path())),
+            name="data",
+        ),
+        Route("/mpl.js", get_mpl_js, name="mpl_js"),
+        Route("/webaggext.js", get_webaggext_js, name="webaggext_js"),
+        WebSocketRoute("/ws/{fig_id:int}", handle_websocket, name="websocket"),
+        Route("/download/{fig_id:int}.{fmt}", download_fig, name="download_fig"),
     ]
     if enable_status_page:
-        routes.append(Route('/status', lambda *args, **kwargs: status_page_auth(handle_status_page, *args, **kwargs), name="status"))
+        assert status_page_auth is not None
+        routes.append(
+            Route(
+                "/status",
+                lambda *args, **kwargs: status_page_auth(
+                    handle_status_page, *args, **kwargs
+                ),
+                name="status",
+            )
+        )
     app = Starlette(routes=routes)
     return app
