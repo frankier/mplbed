@@ -4,7 +4,9 @@ from mplbed.html import impl
 def _wrap_markupsafe(func):
     def wrapper(*args, **kwargs):
         from markupsafe import Markup
+
         return Markup(func(*args, **kwargs))
+
     return wrapper
 
 
