@@ -9,7 +9,7 @@ from starlette.routing import Route, Mount, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
-from mplbed.server.utils import SyncWebSocket
+from mplbed.server.utils import WorkerThreadWebSocket
 from mplbed.webaggext.impl import (
     FigureManagerWebAggExt,
     FigureCollector,
@@ -61,6 +61,9 @@ async def download_fig(request):
 async def handle_websocket(websocket):
     import os
 
+    import anyio
+    from anyio.lowlevel import current_token
+
     mplbed_profile = "MPLBED_PROFILE" in os.environ
     if mplbed_profile:
         try:
@@ -72,7 +75,7 @@ async def handle_websocket(websocket):
     supports_binary = True  # noqa: F841
     added = False
     fig_ids = []
-    sync_websocket = SyncWebSocket(websocket)
+    sync_websocket = WorkerThreadWebSocket(websocket, current_token())
     if mplbed_profile:
         profile_counter = 0
     try:
@@ -84,7 +87,7 @@ async def handle_websocket(websocket):
             fig_ids.append(fig_id)
             manager = managers[fig_id]
             if not added:
-                manager.add_web_socket(sync_websocket)
+                await anyio.to_thread.run_sync(manager.add_web_socket, sync_websocket)  # ty: ignore
                 added = True
             collector = FigureCollector(target="modal", on_close="remove_dialog")
             if message["type"] == "supports_binary":
@@ -96,7 +99,8 @@ async def handle_websocket(websocket):
                         profiler = pyinstrument.Profiler()
                         profiler.start()
                     try:
-                        manager.handle_json(message)
+                        # ty breaks here I think?
+                        await anyio.to_thread.run_sync(manager.handle_json, message)  # ty: ignore
                     finally:
                         if mplbed_profile:
                             profiler.stop()
