@@ -59,25 +59,15 @@ async def download_fig(request):
 
 
 async def handle_websocket(websocket):
-    import os
-
     import anyio
     from anyio.lowlevel import current_token
 
-    mplbed_profile = "MPLBED_PROFILE" in os.environ
-    if mplbed_profile:
-        try:
-            import pyinstrument  # ty: ignore[unresolved-import]
-        except ImportError:
-            mplbed_profile = False
     fig_id = websocket.path_params["fig_id"]
     # TOOD: Make use of this?
     supports_binary = True  # noqa: F841
     added = False
     fig_ids = []
     sync_websocket = WorkerThreadWebSocket(websocket, current_token())
-    if mplbed_profile:
-        profile_counter = 0
     try:
         await websocket.accept()
         async for message in websocket.iter_json():
@@ -94,23 +84,8 @@ async def handle_websocket(websocket):
                 supports_binary = message["value"]  # noqa: F841
             else:
                 with collector:
-                    if mplbed_profile:
-                        profile_counter += 1
-                        profiler = pyinstrument.Profiler()
-                        profiler.start()
-                    try:
-                        # ty breaks here I think?
-                        await anyio.to_thread.run_sync(manager.handle_json, message)  # ty: ignore
-                    finally:
-                        if mplbed_profile:
-                            profiler.stop()
-                            out_path = f"profiles/{fig_id}_{profile_counter}.html"
-                            with open(out_path, "w") as f:
-                                f.write(profiler.output_html())
-                                import os
-
-                                full_path = os.path.realpath(f.name)
-                                print(f"Wrote profile to {full_path}")
+                    # ty breaks here I think?
+                    await anyio.to_thread.run_sync(manager.handle_json, message)  # ty: ignore
             for fig in collector.consume_many():
                 await websocket.send_json({"type": "newfig", "payload": fig})
     finally:
