@@ -8,11 +8,22 @@ from mplbed.doc_helpers import PARAMS_DS as D
 
 
 _native_app: ContextVar[Any] = ContextVar("_native_app", default=None)
-_prefix_and_app: ContextVar[Tuple[str, Starlette] | None] = ContextVar("_prefix_and_app", default=None)
+_prefix_and_app: ContextVar[Tuple[str, Starlette] | None] = ContextVar(
+    "_prefix_and_app", default=None
+)
 
 
 class MplbedMiddleware:
-    def __init__(self, default_app, *, prefix: str, app=None, app_kwargs=None, manage_routing=True, native_app=None):
+    def __init__(
+        self,
+        default_app,
+        *,
+        prefix: str,
+        app=None,
+        app_kwargs=None,
+        manage_routing=True,
+        native_app=None,
+    ):
         f"""
         Initialize the MplbedMiddleware.
 
@@ -21,15 +32,18 @@ class MplbedMiddleware:
         default_app : ASGI3Application
             The default ASGI app to use (i.e. the main app, typically yours).
         {D.prefix}
-        {D.mplbed_starlette_app('app')}
-        {D.mplbed_starlette_app_kwargs('app_kwargs')}
+        {D.mplbed_starlette_app("app")}
+        {D.mplbed_starlette_app_kwargs("app_kwargs")}
         {D.manage_routing}
         {D.native_app}
         """
         from mplbed.server import mplbed_app_factory
+
         self.main_app = default_app
         if app is None and not manage_routing:
-            raise ValueError("If manage_routing is False, you must construct and provide the app yourself (otherwise how do you plan to route to it?)")
+            raise ValueError(
+                "If manage_routing is False, you must construct and provide the app yourself (otherwise how do you plan to route to it?)"
+            )
         if app is not None:
             self.mplbed_app = app
         elif app_kwargs is not None:
@@ -45,7 +59,7 @@ class MplbedMiddleware:
     async def __call__(self, scope, receive, send):
         with (
             _native_app.set(self.native_app),
-            _prefix_and_app.set((self.prefix, self.mplbed_app))
+            _prefix_and_app.set((self.prefix, self.mplbed_app)),
         ):
             if self.manage_routing:
                 assert self.mount
@@ -90,7 +104,9 @@ def url_path_for(name, **path_params):
     if prefix_and_app is None:
         prefix_and_app = _prefix_and_app.get()
         if prefix_and_app is None:
-            raise RuntimeError("Missing current prefix_and_app in context! Did you install the MlpbedMiddleware? (_prefix_and_app was not passed)")
+            raise RuntimeError(
+                "Missing current prefix_and_app in context! Did you install the MlpbedMiddleware? (_prefix_and_app was not passed)"
+            )
     prefix, app = prefix_and_app
     path = app.url_path_for(name, **path_params)
     return prefix + path

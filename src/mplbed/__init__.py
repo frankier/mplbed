@@ -10,5 +10,5 @@ __all__ = [
     "mplbed_app_factory",
     "raw_html",
     "safe_html",
-    "MplbedMiddleware"
+    "MplbedMiddleware",
 ]

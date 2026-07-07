@@ -1,7 +1,9 @@
 try:
     import quart
 except ImportError as e:
-    e.add_note("The mplbed Quart integration requires the Quart package. Please install it with `pip install quart`.")
+    e.add_note(
+        "The mplbed Quart integration requires the Quart package. Please install it with `pip install quart`."
+    )
     raise
 
 
@@ -15,53 +17,60 @@ from mplbed.integration.common import mk_figure_page_variants, setup_page_docstr
 
 
 def _mk_quart_response(html):
-    return quart.Response(html, mimetype='text/html')
+    return quart.Response(html, mimetype="text/html")
 
 
 def _require_native_app(app=None):
     if app is None:
         from mplbed.asgi import get_native_app
+
         app = get_native_app()
         if app is None:
-            raise RuntimeError("No current app found. Please provide a Quart app or ensure that the MplbedMiddleware is installed.")
+            raise RuntimeError(
+                "No current app found. Please provide a Quart app or ensure that the MplbedMiddleware is installed."
+            )
     return app
 
 
 async def _figure_page_html_jinja(fig, *, template, app=None):
     from mplbed.html.safe import figure_html
+
     app = _require_native_app(app)
     fig_html = figure_html(fig, target="body")
     return await app.render_template(
         template,
         HEAD_TEMPLATE_VARIABLE_NAME=lambda core=False: head_content(core=core),
-        fig=fig_html
+        fig=fig_html,
     )
 
 
-globals().update(mk_figure_page_variants(
-    suffix="",
-    generate_html=figure_page_html,
-    response_factory=_mk_quart_response,
-    kwarg_defaults=dict(template=default_figure_page_template),
-    ds_response_name="Quart Response",
-    ds_template_comment="a function taking and returning raw strings",
-    ds_params_extra=fdf("""
+globals().update(
+    mk_figure_page_variants(
+        suffix="",
+        generate_html=figure_page_html,
+        response_factory=_mk_quart_response,
+        kwarg_defaults=dict(template=default_figure_page_template),
+        ds_response_name="Quart Response",
+        ds_template_comment="a function taking and returning raw strings",
+        ds_params_extra=fdf("""
     template : callable, optional
         A callable taking the raw strings `head`, `title` and `fig` as keyword
         arguments and returning the HTML template to use for rendering the
         figure page as a raw string. Will default to
         `default_figure_page_template` if not provided.
-    """)
-))
+    """),
+    )
+)
 
 
-globals().update(mk_figure_page_variants(
-    suffix="_jinja",
-    generate_html=_figure_page_html_jinja,
-    response_factory=_mk_quart_response,
-    ds_response_name="Quart Response",
-    ds_template_comment="a Jinja template",
-    ds_params_extra=fdf(f"""
+globals().update(
+    mk_figure_page_variants(
+        suffix="_jinja",
+        generate_html=_figure_page_html_jinja,
+        response_factory=_mk_quart_response,
+        ds_response_name="Quart Response",
+        ds_template_comment="a Jinja template",
+        ds_params_extra=fdf(f"""
     template : str
         The path to a Jinja template which will be passed the template variables
         `{HEAD_TEMPLATE_VARIABLE_NAME}` and `fig`.
@@ -69,11 +78,19 @@ globals().update(mk_figure_page_variants(
         The Quart app to use for rendering the Jinja template. If not provided,
         the app passed to setup(...) and/or `MplbedMiddleware` will be used.
         Typically this does not need to be provided.
-    """)
-))
+    """),
+    )
+)
 
 
-def install_middleware(app, *, prefix=DEFAULT_PREFIX, mplbed_starlette_app=None, mplbed_starlette_app_kwargs=None, manage_routing=True):
+def install_middleware(
+    app,
+    *,
+    prefix=DEFAULT_PREFIX,
+    mplbed_starlette_app=None,
+    mplbed_starlette_app_kwargs=None,
+    manage_routing=True,
+):
     f"""
     Install the mplbed middleware on the given Quart app.
 
@@ -106,6 +123,7 @@ def register_context_processor(app):
     app : Quart
         The Quart app to register the context processor on.
     """
+
     @app.context_processor
     async def inject_head_content():
         return {
@@ -115,7 +133,9 @@ def register_context_processor(app):
     return inject_head_content
 
 
-@setup_page_docstring(lambda p: f"""
+@setup_page_docstring(
+    lambda p: (
+        f"""
     Setup the mplbed integration for the given Quart app.
     
     This function performs all the integration steps necessary to use mplbed
@@ -135,7 +155,9 @@ def register_context_processor(app):
     {p.do_register_context_processor}
     {p.do_use_mpl_backend}
     {p.use_webaggext_backend}
-""")
+"""
+    )
+)
 def setup(
     app,
     *,
@@ -154,12 +176,13 @@ def setup(
             prefix=prefix,
             mplbed_starlette_app=mplbed_starlette_app,
             mplbed_starlette_app_kwargs=mplbed_starlette_app_kwargs,
-            manage_routing=manage_routing
+            manage_routing=manage_routing,
         )
     if do_register_context_processor:
         register_context_processor(app)
     if do_use_mpl_backend:
         from mplbed import webaggext
+
         webaggext.use(ext=use_webaggext_backend)
 
 
@@ -183,6 +206,7 @@ def iframe_for(endpoint, *, app=None, **kwargs):
         The HTML snippet for the iframe.
     """
     from markupsafe import Markup
+
     app = _require_native_app(app)
     url = app.url_for(endpoint, **kwargs)
     return Markup(
