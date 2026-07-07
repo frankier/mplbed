@@ -31,6 +31,9 @@ test = [
     "pytest-playwright>=0.5",
     "pillow>=10",
 ]
+qa = [
+    "ty",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
