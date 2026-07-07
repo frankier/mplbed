@@ -11,7 +11,7 @@ import io
 import pytest
 from PIL import Image
 
-from conftest import running_example
+from conftest import EXAMPLES, running_example
 
 pytestmark = pytest.mark.e2e
 
@@ -150,3 +150,75 @@ def test_pan_each_figure(example_spec, page):
                 )
             assert total, f"{example_spec.id}{route}: no figures found"
         assert proc.poll() is None, f"{example_spec.id} exited early"
+
+
+def test_popup_spawn_dismiss_respawn(page):
+    """
+    For the popup example specifically: clicking the in-figure button spawns
+    a popup dialog, clicking away from the popup dismisses it (removing the
+    dialog from the DOM entirely), and clicking the button again spawns
+    another popup.
+    """
+    spec = next(s for s in EXAMPLES if s.id == "starlette-demo_popup")
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url + "/", wait_until="load")
+        root = page.locator(".mpl-figure-root").first
+        canvas = _canvas_for_root(root)
+        canvas.wait_for(state="visible", timeout=15000)
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+
+        for round_num in range(2):
+            label = f"{spec.id} round {round_num}"
+            assert page.locator("dialog").count() == 0, (
+                f"{label}: a dialog is present before clicking the button"
+            )
+
+            # The Button widget fills the figure's only Axes, so a click in
+            # the middle of the canvas lands on it.
+            box = canvas.bounding_box()
+            assert box is not None, f"{label}: main canvas has no bounding box"
+            page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+
+            dialog = page.locator("dialog[open]")
+            dialog.wait_for(state="visible", timeout=15000)
+            popup_canvas = dialog.locator("canvas.mpl-canvas")
+            popup_canvas.wait_for(state="visible", timeout=15000)
+            # Besides letting the canvas render, this also gets us past the
+            # ~1s window after showModal() during which mk_modal suppresses
+            # light dismissal (to swallow the mouseup of the opening click).
+            page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+            assert not _is_blank(_canvas_png_bytes(popup_canvas)), (
+                f"{label}: popup canvas is blank"
+            )
+
+            # Click away from the popup: pick a viewport corner that is
+            # outside the dialog's box (it sits top-centre, so the bottom
+            # corners normally qualify).
+            viewport = page.viewport_size
+            dialog_box = dialog.bounding_box()
+            assert dialog_box is not None, f"{label}: dialog has no bounding box"
+
+            def outside_dialog(x, y):
+                return not (
+                    dialog_box["x"] <= x <= dialog_box["x"] + dialog_box["width"]
+                    and dialog_box["y"] <= y <= dialog_box["y"] + dialog_box["height"]
+                )
+
+            corners = [
+                (10, viewport["height"] - 10),
+                (viewport["width"] - 10, viewport["height"] - 10),
+                (viewport["width"] - 10, 10),
+                (10, 10),
+            ]
+            away = next((p for p in corners if outside_dialog(*p)), None)
+            assert away is not None, f"{label}: dialog covers the whole viewport"
+            page.mouse.click(*away)
+
+            # Dismissal closes the figure's websocket, which removes the
+            # dialog from the DOM entirely (on_close="remove_dialog").
+            dialog.wait_for(state="detached", timeout=15000)
+            assert page.locator("dialog").count() == 0, (
+                f"{label}: dialog still in DOM after clicking away"
+            )
+
+        assert proc.poll() is None, f"{spec.id} exited early"
