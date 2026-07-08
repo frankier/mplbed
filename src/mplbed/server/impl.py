@@ -1,6 +1,7 @@
 from abc import ABCMeta
 import io
 import matplotlib as mpl
+from matplotlib._pylab_helpers import Gcf
 import mimetypes
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
@@ -66,6 +67,17 @@ def handle_json(manager, websocket, message):
         websocket.send_json({"type": "newfig", "payload": fig})
 
 
+def close_fig(worker_websocket, fig_id, clean):
+    manager = managers[fig_id]
+    if clean:
+        worker_websocket.send_json({"type": "closed", "figure_id": fig_id})
+    Gcf.destroy(manager)
+    del managers[fig_id]
+
+
+CLEANUP_CLOSED = True
+
+
 async def handle_websocket(websocket):
     import anyio
     from anyio.lowlevel import current_token
@@ -93,6 +105,15 @@ async def handle_websocket(websocket):
                 await anyio.to_thread.run_sync(  # ty: ignore
                     handle_json, manager, worker_websocket, message
                 )
+            if isinstance(manager, FigureManagerWebAggExt):
+                if manager.wants_close:
+                    manager.remove_web_socket(worker_websocket)
+                    await anyio.to_thread.run_sync(  # ty: ignore
+                        close_fig, worker_websocket, fig_id, True
+                    )
+                    fig_ids.remove(fig_id)
+            if not fig_ids:
+                break
     finally:
         if (
             websocket.client_state != WebSocketState.DISCONNECTED
@@ -103,7 +124,10 @@ async def handle_websocket(websocket):
             if fig_id is not None and fig_id in managers:
                 manager = managers[fig_id]
                 manager.remove_web_socket(worker_websocket)
-                del managers[fig_id]
+                if CLEANUP_CLOSED and not manager.web_sockets:
+                    await anyio.to_thread.run_sync(  # ty: ignore
+                        close_fig, worker_websocket, fig_id, False
+                    )
 
 
 def handle_status_page(request):
