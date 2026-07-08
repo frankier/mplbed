@@ -55,7 +55,7 @@ class PopupDemoMpl:
         self.popup_fig.show()
 
     def into_html(self):
-        return raw_html.figure_html(self.fig)
+        return raw_html.figure_html(self.fig, self)
 
 
 def homepage(request):

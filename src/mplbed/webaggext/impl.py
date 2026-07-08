@@ -67,6 +67,7 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._wants_close = False
+        self._retains = []
 
     def show(self):
         from mplbed.server.impl import add_manager
@@ -84,6 +85,9 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
 
     def close(self):
         self._wants_close = True
+
+    def add_retains(self, *retains):
+        self._retains.extend(retains)
 
     @property
     def wants_close(self):
