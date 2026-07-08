@@ -1,13 +1,19 @@
 """
 Shows draw_idle(...) working with webagg and webaggext --- pressing enter swaps the
 colors of the two scatter plots.
+
+Flags: USE_BASIC_WEBAGG_BACKEND
 """
+import os
 from matplotlib import pyplot as plt
 
 from starlette.applications import Starlette
 from starlette.routing import Route
 
 from mplbed import mplbed_starlette
+
+
+use_basic_webagg_backend = "USE_BASIC_WEBAGG_BACKEND" in os.environ
 
 
 def page(request):
@@ -38,4 +44,4 @@ app = Starlette(
     debug=True,
     routes=[Route('/', page)],
 )
-mplbed_starlette.setup(app)
+mplbed_starlette.setup(app, use_webaggext_backend=not use_basic_webagg_backend)
