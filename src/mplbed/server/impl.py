@@ -1,6 +1,7 @@
 from abc import ABCMeta
 import io
 import matplotlib as mpl
+from matplotlib._pylab_helpers import Gcf
 import mimetypes
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
@@ -58,26 +59,35 @@ async def download_fig(request):
     return Response(resp_text, media_type=media_type)
 
 
-async def handle_websocket(websocket):
-    import os
+def handle_json(manager, websocket, message):
+    collector = FigureCollector(target="modal", on_close="remove_dialog")
+    with collector:
+        manager.handle_json(message)
+    for fig in collector.consume_many():
+        websocket.send_json({"type": "newfig", "payload": fig})
 
+
+def close_fig(worker_websocket, fig_id, clean):
+    manager = managers[fig_id]
+    if clean:
+        worker_websocket.send_json({"type": "closed", "figure_id": fig_id})
+    Gcf.destroy(manager)
+    del managers[fig_id]
+
+
+CLEANUP_CLOSED = True
+
+
+async def handle_websocket(websocket):
     import anyio
     from anyio.lowlevel import current_token
 
-    mplbed_profile = "MPLBED_PROFILE" in os.environ
-    if mplbed_profile:
-        try:
-            import pyinstrument  # ty: ignore[unresolved-import]
-        except ImportError:
-            mplbed_profile = False
     fig_id = websocket.path_params["fig_id"]
     # TOOD: Make use of this?
     supports_binary = True  # noqa: F841
     added = False
     fig_ids = []
-    sync_websocket = WorkerThreadWebSocket(websocket, current_token())
-    if mplbed_profile:
-        profile_counter = 0
+    worker_websocket = WorkerThreadWebSocket(websocket, current_token())
     try:
         await websocket.accept()
         async for message in websocket.iter_json():
@@ -87,32 +97,23 @@ async def handle_websocket(websocket):
             fig_ids.append(fig_id)
             manager = managers[fig_id]
             if not added:
-                await anyio.to_thread.run_sync(manager.add_web_socket, sync_websocket)  # ty: ignore
+                await anyio.to_thread.run_sync(manager.add_web_socket, worker_websocket)  # ty: ignore
                 added = True
-            collector = FigureCollector(target="modal", on_close="remove_dialog")
             if message["type"] == "supports_binary":
                 supports_binary = message["value"]  # noqa: F841
             else:
-                with collector:
-                    if mplbed_profile:
-                        profile_counter += 1
-                        profiler = pyinstrument.Profiler()
-                        profiler.start()
-                    try:
-                        # ty breaks here I think?
-                        await anyio.to_thread.run_sync(manager.handle_json, message)  # ty: ignore
-                    finally:
-                        if mplbed_profile:
-                            profiler.stop()
-                            out_path = f"profiles/{fig_id}_{profile_counter}.html"
-                            with open(out_path, "w") as f:
-                                f.write(profiler.output_html())
-                                import os
-
-                                full_path = os.path.realpath(f.name)
-                                print(f"Wrote profile to {full_path}")
-            for fig in collector.consume_many():
-                await websocket.send_json({"type": "newfig", "payload": fig})
+                await anyio.to_thread.run_sync(  # ty: ignore
+                    handle_json, manager, worker_websocket, message
+                )
+            if isinstance(manager, FigureManagerWebAggExt):
+                if manager.wants_close:
+                    manager.remove_web_socket(worker_websocket)
+                    await anyio.to_thread.run_sync(  # ty: ignore
+                        close_fig, worker_websocket, fig_id, True
+                    )
+                    fig_ids.remove(fig_id)
+            if not fig_ids:
+                break
     finally:
         if (
             websocket.client_state != WebSocketState.DISCONNECTED
@@ -122,8 +123,11 @@ async def handle_websocket(websocket):
         for fig_id in fig_ids:
             if fig_id is not None and fig_id in managers:
                 manager = managers[fig_id]
-                manager.remove_web_socket(sync_websocket)
-                del managers[fig_id]
+                manager.remove_web_socket(worker_websocket)
+                if CLEANUP_CLOSED and not manager.web_sockets:
+                    await anyio.to_thread.run_sync(  # ty: ignore
+                        close_fig, worker_websocket, fig_id, False
+                    )
 
 
 def handle_status_page(request):
