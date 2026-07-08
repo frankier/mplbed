@@ -9,7 +9,7 @@ from matplotlib.backends.backend_webagg_core import (
     FigureManagerWebAgg,
     NavigationToolbar2WebAgg,
 )
-from matplotlib.backend_bases import _Backend
+from matplotlib.backend_bases import _Backend, CloseEvent
 
 
 @dataclass
@@ -64,6 +64,10 @@ def consume_figs(show_context):
 class FigureManagerWebAggExt(FigureManagerWebAgg):
     _toolbar2_class = NavigationToolbar2WebAgg
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._wants_close = False
+
     def show(self):
         from mplbed.server.impl import add_manager
         from mplbed.html.raw import figure_html_from_id
@@ -74,6 +78,16 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
             self.num, target=show_context.target, on_close=show_context.on_close
         )
         add_fig(html)
+
+    def destroy(self):
+        CloseEvent("close_event", self.canvas)._process()  # ty: ignore
+
+    def close(self):
+        self._wants_close = True
+
+    @property
+    def wants_close(self):
+        return self._wants_close
 
 
 class FigureCollector:
@@ -102,7 +116,15 @@ class FigureCollector:
 
 
 class FigureCanvasWebAggExt(FigureCanvasWebAggCore):
+    manager: None | FigureManagerWebAggExt
     manager_class = _api.classproperty(lambda cls: FigureManagerWebAggExt)
+
+    def handle_close(self, event):
+        if self.manager is not None:
+            self.manager.close()
+        else:
+            # Close immediately if no manager is present
+            CloseEvent("close_event", self)._process()  # ty: ignore
 
 
 @_Backend.export

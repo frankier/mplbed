@@ -224,13 +224,6 @@ def test_popup_spawn_dismiss_respawn(page):
         assert proc.poll() is None, f"{spec.id} exited early"
 
 
-@pytest.mark.xfail(
-    reason="MNE's help window only opens the first time: dismissing the popup "
-    "dialog client-side never closes the server-side help figure, so MNE's "
-    "_toggle_help_fig toggle state desyncs and later presses take the "
-    "close branch instead of reopening",
-    strict=True,
-)
 def test_mne_help_popup_reopens(page):
     """
     For the integrate_mne example: pressing '?' over the raw-browser figure
