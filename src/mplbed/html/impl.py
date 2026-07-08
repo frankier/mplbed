@@ -57,11 +57,17 @@ def figure_html_from_id(
     return "\n".join(bits)
 
 
-def figure_html(figure, *, target="inline", on_close="msg_discrete"):
-    from matplotlib.backends.backend_webagg import new_figure_manager_given_figure  # ty: ignore[unresolved-import]
+def figure_html(figure, *retains, target="inline", on_close="msg_discrete"):
+    from matplotlib.pyplot import _get_backend_mod as get_backend_mod
     from mplbed.server.impl import add_manager
 
-    manager = new_figure_manager_given_figure(id(figure), figure)
+    manager = get_backend_mod().new_figure_manager_given_figure(id(figure), figure)
+    if hasattr(manager, "add_retains"):
+        manager.add_retains(*retains)  # ty: ignore
+    else:
+        if not hasattr(figure, "_retains"):
+            figure._retains = []
+        figure._retains.extend(retains)
     add_manager(manager)
     return figure_html_from_id(manager.num, target=target, on_close=on_close)
 
