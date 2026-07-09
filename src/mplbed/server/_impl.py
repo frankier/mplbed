@@ -1,22 +1,21 @@
-from abc import ABCMeta
 import io
-from anyio import create_task_group
-import matplotlib as mpl
-from matplotlib._pylab_helpers import Gcf
 import mimetypes
+
+import matplotlib as mpl
+from anyio import create_task_group
+from matplotlib._pylab_helpers import Gcf
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
-from starlette.routing import Route, Mount, WebSocketRoute
+from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
-from mplbed.server.utils import WorkerThreadWebSocket
-from mplbed.webaggext.impl import (
-    FigureManagerWebAggExt,
+from mplbed.server._utils import WorkerThreadWebSocket
+from mplbed.webaggext._impl import (
     FigureCollector,
+    FigureManagerWebAggExt,
 )
-
 
 managers = {}
 
@@ -37,6 +36,7 @@ def get_mpl_js(request):
 
 def get_webaggext_js(request):
     from importlib import resources as impresources
+
     import mplbed
 
     js_file = impresources.files(mplbed) / "webaggext" / "webaggext.js"
@@ -49,9 +49,7 @@ async def download_fig(request):
     fig_id = request.path_params["fig_id"]
     fmt = request.path_params["fmt"]
     if fig_id not in managers:
-        raise HTTPException(
-            status_code=404, detail="Figure not found; It may have expired."
-        )
+        raise HTTPException(status_code=404, detail="Figure not found; It may have expired.")
     manager = managers[fig_id]
     buff = io.BytesIO()
     manager.canvas.figure.savefig(buff, format=fmt)
@@ -148,37 +146,14 @@ async def handle_websocket(websocket):
                     )
 
 
-def handle_status_page(request):
-    pass
-
-
-class MplPageAuth(metaclass=ABCMeta):
-    def __call__(self, *args, **kwargs): ...
-
-
-class ExternalStatusPageAuth(MplPageAuth):
-    def __call__(self, handler, *args, **kwargs):
-        return handler(*args, **kwargs)
-
-
-def mplbed_app_factory(
-    *, enable_status_page=False, status_page_auth: MplPageAuth | None = None
-):
+def mplbed_app_factory():
+    """Create a Starlette app to act as the backend for webagg or webaggext."""
     from os.path import realpath
 
-    if enable_status_page:
-        if status_page_auth is None:
-            raise ValueError(
-                "status_page_auth must be provided when enable_status_page is True"
-            )
-        if not isinstance(status_page_auth, MplPageAuth):
-            raise ValueError("status_page_auth must be an subclass of StatusPageAuth")
     routes = [
         Mount(
             "/_static",
-            app=StaticFiles(
-                directory=realpath(FigureManagerWebAggExt.get_static_file_path())
-            ),
+            app=StaticFiles(directory=realpath(FigureManagerWebAggExt.get_static_file_path())),
             name="static",
         ),
         Mount(
@@ -191,16 +166,5 @@ def mplbed_app_factory(
         WebSocketRoute("/ws/{fig_id:int}", handle_websocket, name="websocket"),
         Route("/download/{fig_id:int}.{fmt}", download_fig, name="download_fig"),
     ]
-    if enable_status_page:
-        assert status_page_auth is not None
-        routes.append(
-            Route(
-                "/status",
-                lambda *args, **kwargs: status_page_auth(
-                    handle_status_page, *args, **kwargs
-                ),
-                name="status",
-            )
-        )
     app = Starlette(routes=routes)
     return app

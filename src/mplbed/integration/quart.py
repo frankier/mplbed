@@ -1,19 +1,18 @@
 try:
     import quart
 except ImportError as e:
-    e.add_note(
-        "The mplbed Quart integration requires the Quart package. Please install it with `pip install quart`."
-    )
+    e.add_note("The mplbed Quart integration requires the Quart package. Please install it with `pip install quart`.")
     raise
 
 
+from mplbed._doc_helpers import PARAMS_DS as D
+from mplbed._doc_helpers import doc, fdf
 from mplbed.asgi import MplbedMiddleware
 from mplbed.consts import DEFAULT_PREFIX, HEAD_TEMPLATE_VARIABLE_NAME
-from mplbed.html.impl import default_figure_page_template
+from mplbed.html._impl import default_figure_page_template
 from mplbed.html.raw import figure_page_html
 from mplbed.html.safe import head_content
-from mplbed.doc_helpers import PARAMS_DS as D, fdf
-from mplbed.integration.common import mk_figure_page_variants, setup_page_docstring
+from mplbed.integration._common import mk_figure_page_variants, setup_page_docstring
 
 
 def _mk_quart_response(html):
@@ -83,14 +82,7 @@ globals().update(
 )
 
 
-def install_middleware(
-    app,
-    *,
-    prefix=DEFAULT_PREFIX,
-    mplbed_starlette_app=None,
-    mplbed_starlette_app_kwargs=None,
-    manage_routing=True,
-):
+@doc(
     f"""
     Install the mplbed middleware on the given Quart app.
 
@@ -104,6 +96,15 @@ def install_middleware(
     {D.manage_routing}
     {D.native_app}
     """
+)
+def install_middleware(
+    app,
+    *,
+    prefix=DEFAULT_PREFIX,
+    mplbed_starlette_app=None,
+    mplbed_starlette_app_kwargs=None,
+    manage_routing=True,
+):
     app.asgi_app = MplbedMiddleware(
         app.asgi_app,
         prefix=prefix,
@@ -115,13 +116,13 @@ def install_middleware(
 
 
 def register_context_processor(app):
-    """
-    Register a context processor for the given Quart app to inject head content.
+    """Register a context processor for the given Quart app to inject head content.
 
     Parameters
     ----------
     app : Quart
         The Quart app to register the context processor on.
+
     """
 
     @app.context_processor
@@ -187,8 +188,7 @@ def setup(
 
 
 def iframe_for(endpoint, *, app=None, **kwargs):
-    """
-    Generate an iframe HTML snippet for the given Quart endpoint.
+    """Generate an iframe HTML snippet for the given Quart endpoint.
 
     Parameters
     ----------
@@ -204,11 +204,10 @@ def iframe_for(endpoint, *, app=None, **kwargs):
     -------
     str
         The HTML snippet for the iframe.
+
     """
     from markupsafe import Markup
 
     app = _require_native_app(app)
     url = app.url_for(endpoint, **kwargs)
-    return Markup(
-        f'<iframe src="{url}" width="100%" height="600" frameborder="0"></iframe>'
-    )
+    return Markup(f'<iframe src="{url}" width="100%" height="600" frameborder="0"></iframe>')
