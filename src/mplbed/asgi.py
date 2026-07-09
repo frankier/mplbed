@@ -4,16 +4,19 @@ from typing import Any
 from starlette.applications import Starlette
 from starlette.routing import Match, Mount
 
-from mplbed.doc_helpers import PARAMS_DS as D
-from mplbed.doc_helpers import doc
+from mplbed._doc_helpers import PARAMS_DS as D
+from mplbed._doc_helpers import doc
 
 _native_app: ContextVar[Any] = ContextVar("_native_app", default=None)
-_prefix_and_app: ContextVar[tuple[str, Starlette] | None] = ContextVar(
-    "_prefix_and_app", default=None
-)
+_prefix_and_app: ContextVar[tuple[str, Starlette] | None] = ContextVar("_prefix_and_app", default=None)
 
 
 class MplbedMiddleware:
+    """
+    ASGI middleware to sets up routing and ensures context the correct context is
+    available so that the integrations work correctly.
+    """
+
     @doc(
         f"""
         Initialize the MplbedMiddleware.
@@ -60,6 +63,7 @@ class MplbedMiddleware:
             self.mount = Mount(prefix, self.mplbed_app)
 
     async def __call__(self, scope, receive, send):
+        """ASGI entry point for the middleware."""
         with (
             _native_app.set(self.native_app),
             _prefix_and_app.set((self.prefix, self.mplbed_app)),
@@ -75,25 +79,25 @@ class MplbedMiddleware:
 
 
 def get_native_app():
-    """
-    Get the native app from the current context.
+    """Get the native app from the current context.
 
     Returns
     -------
     Any
         The native app, or None if not set.
+
     """
     return _native_app.get()
 
 
 def get_asgi_app():
-    """
-    Get the ASGI app from the current context.
+    """Get the ASGI app from the current context.
 
     Returns
     -------
     ASGI3Application | None
         The ASGI app, or None if not set.
+
     """
     val = _prefix_and_app.get()
     if val is not None:
@@ -103,6 +107,7 @@ def get_asgi_app():
 
 
 def url_path_for(name, **path_params):
+    """Get the URL path for a given route name and parameters."""
     prefix_and_app = path_params.pop("_prefix_and_app", None)
     if prefix_and_app is None:
         prefix_and_app = _prefix_and_app.get()

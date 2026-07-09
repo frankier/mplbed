@@ -1,4 +1,4 @@
-from mplbed.html.impl import (
+from mplbed.html._impl import (
     default_figure_page_template,
     figure_html,
     figure_html_from_id,

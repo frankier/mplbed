@@ -1,4 +1,4 @@
-from mplbed.html import impl
+from mplbed.html import _impl
 
 
 def _wrap_markupsafe(func):
@@ -10,9 +10,9 @@ def _wrap_markupsafe(func):
     return wrapper
 
 
-figure_html_from_id = _wrap_markupsafe(impl.figure_html_from_id)
-head_content = _wrap_markupsafe(impl.head_content)
-figure_html = _wrap_markupsafe(impl.figure_html)
+figure_html_from_id = _wrap_markupsafe(_impl.figure_html_from_id)
+head_content = _wrap_markupsafe(_impl.head_content)
+figure_html = _wrap_markupsafe(_impl.figure_html)
 
 
 __all__ = [
