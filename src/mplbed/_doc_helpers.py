@@ -1,11 +1,18 @@
-from .consts import DEFAULT_PREFIX
 from typing import Any
+
+from .consts import DEFAULT_PREFIX
+
+
+def doc(s):
+    def decorator(func):
+        func.__doc__ = s
+        return func
+
+    return decorator
 
 
 def fdf(s):
-    """
-    _F_ix _D_ocstring _F_ragment for inclusion in a docstring template.
-    """
+    """_F_ix _D_ocstring _F_ragment for inclusion in a docstring template."""
     from inspect import cleandoc
     from textwrap import indent
 

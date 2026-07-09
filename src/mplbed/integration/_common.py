@@ -1,11 +1,13 @@
-from functools import wraps
 import inspect
-from typing import Any, Dict
+from functools import wraps
+from typing import Any
+
+from frozendict import frozendict
+
+EMPTY_DICT = frozendict()
 
 
-def figure_standalone_docstring_factory(
-    *, response_name, template_comment, is_async, params_extra
-):
+def figure_standalone_docstring_factory(*, response_name, template_comment, is_async, params_extra):
     async_str = "async " if is_async else ""
     await_str = "await " if is_async else ""
     return f"""
@@ -26,14 +28,10 @@ def figure_standalone_docstring_factory(
     """
 
 
-def figure_page_docstring_factory(
-    *, response_name, template_comment, is_generic, wraps, params_extra
-):
+def figure_page_docstring_factory(*, response_name, template_comment, is_generic, wraps, params_extra):
     async_str = "(async) " if is_generic else ""
     await_str = "(await) " if is_generic else ""
-    generic_note = (
-        "All usages are generic with regards to async/sync" if is_generic else ""
-    )
+    generic_note = "All usages are generic with regards to async/sync" if is_generic else ""
     return f"""
     Decorator to create a {response_name} object containing the HTML for the given figure using {template_comment}.
 
@@ -88,14 +86,13 @@ def figure_standalone_factory(
     ds_template_comment="a template",
     ds_params_extra,
 ):
-    need_async = inspect.iscoroutinefunction(
-        generate_html
-    ) or inspect.iscoroutinefunction(response_factory)
+    need_async = inspect.iscoroutinefunction(generate_html) or inspect.iscoroutinefunction(response_factory)
     if make_async is None:
         make_async = need_async
     if need_async and not make_async:
         raise ValueError(
-            "generate_html or response_factory is async, but make_async is False. Set make_async to True to allow async usage."
+            "generate_html or response_factory is async, but make_async is False. "
+            "Set make_async to True to allow async usage."
         )
 
     def process_kwargs(kwargs):
@@ -122,9 +119,7 @@ def figure_standalone_factory(
 
         def figure_standalone(fig, **kwargs):
             generate_html_kwargs, response_factory_kwargs = process_kwargs(kwargs)
-            return response_factory(
-                generate_html(fig, **generate_html_kwargs), **response_factory_kwargs
-            )
+            return response_factory(generate_html(fig, **generate_html_kwargs), **response_factory_kwargs)
 
     figure_standalone.__name__ = name
     figure_standalone.__doc__ = figure_standalone_docstring_factory(
@@ -144,7 +139,6 @@ def figure_page_factory(
     ds_template_comment="a template",
     ds_params_extra,
 ):
-    from frozendict import frozendict
 
     needs_async = inspect.iscoroutinefunction(figure_standalone)
 
@@ -155,9 +149,7 @@ def figure_page_factory(
                 @wraps(inner)
                 async def async_view_wrapper(*args, **kwargs):
                     actual_fig = await inner(*args, **kwargs)
-                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop(
-                        "figure_standalone_kwargs", {}
-                    )
+                    figure_standalone_kwargs: dict[str, Any] = kwargs.pop("figure_standalone_kwargs", {})
                     if needs_async:
                         return await figure_standalone(
                             actual_fig,
@@ -173,9 +165,7 @@ def figure_page_factory(
             else:
                 # Async closure style figure creating function
                 @wraps(inner)
-                async def async_closure_wrapper(
-                    *, figure_standalone_kwargs=frozendict()
-                ):
+                async def async_closure_wrapper(*, figure_standalone_kwargs=EMPTY_DICT):
                     actual_fig = await inner()
                     if needs_async:
                         return await figure_standalone(
@@ -191,30 +181,22 @@ def figure_page_factory(
                 wrapper = async_closure_wrapper
         else:
             if needs_async:
-                raise ValueError(
-                    f"Decorated function must be async for {name} (wrapping {figure_standalone.__name__})"
-                )
+                raise ValueError(f"Decorated function must be async for {name} (wrapping {figure_standalone.__name__})")
             if _has_parameters(inner):
                 # View style figure creating function
                 @wraps(inner)
                 def view_wrapper(*args, **kwargs):
                     actual_fig = figure_standalone(*args, **kwargs)
-                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop(
-                        "figure_standalone_kwargs", {}
-                    )
-                    return figure_page(
-                        actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs}
-                    )
+                    figure_standalone_kwargs: dict[str, Any] = kwargs.pop("figure_standalone_kwargs", {})
+                    return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
 
                 wrapper = view_wrapper
             else:
                 # Closure style figure creating function
                 @wraps(inner)
-                def closure_wrapper(*, figure_standalone_kwargs=frozendict()):
+                def closure_wrapper(*, figure_standalone_kwargs=EMPTY_DICT):
                     actual_fig = figure_standalone()
-                    return figure_page(
-                        actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs}
-                    )
+                    return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
 
                 wrapper = closure_wrapper
         wrapper.__name__ = name
@@ -241,9 +223,7 @@ def mk_figure_page_variants(
     ds_template_comment="a template",
     ds_params_extra,
 ):
-    need_async = inspect.iscoroutinefunction(
-        generate_html
-    ) or inspect.iscoroutinefunction(response_factory)
+    need_async = inspect.iscoroutinefunction(generate_html) or inspect.iscoroutinefunction(response_factory)
     results = {}
     standalone_args = dict(
         generate_html=generate_html,
@@ -260,13 +240,9 @@ def mk_figure_page_variants(
         ds_params_extra=ds_params_extra,
     )
     if need_async:
-        figure_standalone = figure_standalone_factory(
-            f"figure_standalone{suffix}", **standalone_args, make_async=True
-        )
+        figure_standalone = figure_standalone_factory(f"figure_standalone{suffix}", **standalone_args, make_async=True)
         results[f"figure_standalone{suffix}"] = figure_standalone
-        results[f"figure_page{suffix}"] = figure_page_factory(
-            f"figure_page{suffix}", figure_standalone, **page_args
-        )
+        results[f"figure_page{suffix}"] = figure_page_factory(f"figure_page{suffix}", figure_standalone, **page_args)
     else:
         figure_standalone = figure_standalone_factory(
             f"figure_standalone{suffix}",
@@ -274,9 +250,7 @@ def mk_figure_page_variants(
             make_async=False,
         )
         results[f"figure_standalone{suffix}"] = figure_standalone
-        results[f"figure_page{suffix}"] = figure_page_factory(
-            f"figure_page{suffix}", figure_standalone, **page_args
-        )
+        results[f"figure_page{suffix}"] = figure_page_factory(f"figure_page{suffix}", figure_standalone, **page_args)
         figure_standalone_async = figure_standalone_factory(
             f"figure_standalone{suffix}_async", **standalone_args, make_async=True
         )
@@ -288,7 +262,7 @@ def mk_figure_page_variants(
 
 
 def setup_page_docstring(template_func):
-    from mplbed.doc_helpers import fdf, PARAMS_DS, DotAccessDict
+    from mplbed._doc_helpers import PARAMS_DS, DotAccessDict, fdf
 
     def decorator(wrapped):
         wrapped.__doc__ = template_func(
