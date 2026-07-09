@@ -41,6 +41,27 @@ markers = [
     "e2e: end-to-end Playwright tests that drive a real browser",
 ]
 
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # pyupgrade
+    "UP"
+]
+
 [build-system]
 requires = ["uv_build >= 0.11.7, <0.12.0"]
 build-backend = "uv_build"
