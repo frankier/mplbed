@@ -1,6 +1,5 @@
 import io
 import mimetypes
-from abc import ABCMeta
 
 import matplotlib as mpl
 from anyio import create_task_group
@@ -149,31 +148,9 @@ async def handle_websocket(websocket):
                     )
 
 
-def handle_status_page(request):
-    pass
-
-
-class MplPageAuth(metaclass=ABCMeta):
-    def __call__(self, *args, **kwargs): ...
-
-
-class ExternalStatusPageAuth(MplPageAuth):
-    def __call__(self, handler, *args, **kwargs):
-        return handler(*args, **kwargs)
-
-
-def mplbed_app_factory(
-    *, enable_status_page=False, status_page_auth: MplPageAuth | None = None
-):
+def mplbed_app_factory():
     from os.path import realpath
 
-    if enable_status_page:
-        if status_page_auth is None:
-            raise ValueError(
-                "status_page_auth must be provided when enable_status_page is True"
-            )
-        if not isinstance(status_page_auth, MplPageAuth):
-            raise ValueError("status_page_auth must be an subclass of StatusPageAuth")
     routes = [
         Mount(
             "/_static",
@@ -192,16 +169,5 @@ def mplbed_app_factory(
         WebSocketRoute("/ws/{fig_id:int}", handle_websocket, name="websocket"),
         Route("/download/{fig_id:int}.{fmt}", download_fig, name="download_fig"),
     ]
-    if enable_status_page:
-        assert status_page_auth is not None
-        routes.append(
-            Route(
-                "/status",
-                lambda *args, **kwargs: status_page_auth(
-                    handle_status_page, *args, **kwargs
-                ),
-                name="status",
-            )
-        )
     app = Starlette(routes=routes)
     return app
