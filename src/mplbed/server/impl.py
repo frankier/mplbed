@@ -1,5 +1,6 @@
 from abc import ABCMeta
 import io
+from anyio import create_task_group
 import matplotlib as mpl
 from matplotlib._pylab_helpers import Gcf
 import mimetypes
@@ -78,6 +79,14 @@ def close_fig(worker_websocket, fig_id, clean):
 CLEANUP_CLOSED = True
 
 
+async def delayed_draw(manager, mpl_lock):
+    import anyio
+
+    async with mpl_lock:
+        if manager.canvas._delayed_draw_dirty:
+            await anyio.to_thread.run_sync(manager.canvas.draw)  # ty: ignore
+
+
 async def handle_websocket(websocket):
     import anyio
     from anyio.lowlevel import current_token
@@ -88,32 +97,41 @@ async def handle_websocket(websocket):
     added = False
     fig_ids = []
     worker_websocket = WorkerThreadWebSocket(websocket, current_token())
+    mpl_lock = anyio.Lock()
     try:
         await websocket.accept()
-        async for message in websocket.iter_json():
-            msg_fig_id = message["figure_id"]
-            if msg_fig_id != fig_id:
-                continue
-            fig_ids.append(fig_id)
-            manager = managers[fig_id]
-            if not added:
-                await anyio.to_thread.run_sync(manager.add_web_socket, worker_websocket)  # ty: ignore
-                added = True
-            if message["type"] == "supports_binary":
-                supports_binary = message["value"]  # noqa: F841
-            else:
-                await anyio.to_thread.run_sync(  # ty: ignore
-                    handle_json, manager, worker_websocket, message
-                )
-            if isinstance(manager, FigureManagerWebAggExt):
-                if manager.wants_close:
-                    manager.remove_web_socket(worker_websocket)
-                    await anyio.to_thread.run_sync(  # ty: ignore
-                        close_fig, worker_websocket, fig_id, True
-                    )
-                    fig_ids.remove(fig_id)
-            if not fig_ids:
-                break
+        async with create_task_group() as tg:
+            async for message in websocket.iter_json():
+                msg_fig_id = message["figure_id"]
+                if msg_fig_id != fig_id:
+                    continue
+                fig_ids.append(fig_id)
+                manager = managers[fig_id]
+                async with mpl_lock:
+                    if not added:
+                        await anyio.to_thread.run_sync(  # ty: ignore
+                            manager.add_web_socket, worker_websocket
+                        )
+                        added = True
+                    if message["type"] == "supports_binary":
+                        supports_binary = message["value"]  # noqa: F841
+                    else:
+                        await anyio.to_thread.run_sync(  # ty: ignore
+                            handle_json, manager, worker_websocket, message
+                        )
+                if isinstance(manager, FigureManagerWebAggExt):
+                    if manager.wants_close:
+                        async with mpl_lock:
+                            manager.remove_web_socket(worker_websocket)
+                            await anyio.to_thread.run_sync(  # ty: ignore
+                                close_fig, worker_websocket, fig_id, True
+                            )
+                        fig_ids.remove(fig_id)
+                    elif manager.wants_delayed_draw:
+                        manager.canvas._wants_delayed_draw = False
+                        tg.start_soon(delayed_draw, manager, mpl_lock)
+                if not fig_ids:
+                    break
     finally:
         if (
             websocket.client_state != WebSocketState.DISCONNECTED
