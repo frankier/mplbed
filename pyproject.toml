@@ -59,8 +59,22 @@ select = [
     # isort
     "I",
     # pyupgrade
-    "UP"
+    "UP",
+    # pydocstyle
+    "D",
 ]
+
+ignore = [
+    # Package/module-level docstrings
+    "D100",
+    "D104",
+    # Summary line seprate from body
+    "D205"
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+ignore-decorators = ["mplbed._doc_helpers.doc", "mplbed.integration._common.setup_page_docstring"]
 
 [build-system]
 requires = ["uv_build >= 0.11.7, <0.12.0"]
