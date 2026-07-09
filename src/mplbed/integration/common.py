@@ -2,6 +2,10 @@ import inspect
 from functools import wraps
 from typing import Any
 
+from frozendict import frozendict
+
+EMPTY_DICT = frozendict()
+
 
 def figure_standalone_docstring_factory(
     *, response_name, template_comment, is_async, params_extra
@@ -95,7 +99,8 @@ def figure_standalone_factory(
         make_async = need_async
     if need_async and not make_async:
         raise ValueError(
-            "generate_html or response_factory is async, but make_async is False. Set make_async to True to allow async usage."
+            "generate_html or response_factory is async, but make_async is False. "
+            "Set make_async to True to allow async usage."
         )
 
     def process_kwargs(kwargs):
@@ -144,7 +149,6 @@ def figure_page_factory(
     ds_template_comment="a template",
     ds_params_extra,
 ):
-    from frozendict import frozendict
 
     needs_async = inspect.iscoroutinefunction(figure_standalone)
 
@@ -173,9 +177,7 @@ def figure_page_factory(
             else:
                 # Async closure style figure creating function
                 @wraps(inner)
-                async def async_closure_wrapper(
-                    *, figure_standalone_kwargs=frozendict()
-                ):
+                async def async_closure_wrapper(*, figure_standalone_kwargs=EMPTY_DICT):
                     actual_fig = await inner()
                     if needs_async:
                         return await figure_standalone(
@@ -210,7 +212,7 @@ def figure_page_factory(
             else:
                 # Closure style figure creating function
                 @wraps(inner)
-                def closure_wrapper(*, figure_standalone_kwargs=frozendict()):
+                def closure_wrapper(*, figure_standalone_kwargs=EMPTY_DICT):
                     actual_fig = figure_standalone()
                     return figure_page(
                         actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs}

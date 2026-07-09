@@ -6,12 +6,7 @@ from starlette.websockets import WebSocket
 def is_anyio_worker_thread() -> bool:
     from anyio._core._eventloop import threadlocals
 
-    try:
-        threadlocals.current_token
-    except AttributeError:
-        return False
-    else:
-        return True
+    return hasattr(threadlocals, "current_token")
 
 
 class WorkerThreadOnlyError(RuntimeError):
