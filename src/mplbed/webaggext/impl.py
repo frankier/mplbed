@@ -62,6 +62,7 @@ def consume_figs(show_context):
 
 
 class FigureManagerWebAggExt(FigureManagerWebAgg):
+    canvas: FigureCanvasWebAggExt
     _toolbar2_class = NavigationToolbar2WebAgg
 
     def __init__(self, *args, **kwargs):
@@ -93,6 +94,10 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
     def wants_close(self):
         return self._wants_close
 
+    @property
+    def wants_delayed_draw(self):
+        return self.canvas._wants_delayed_draw
+
 
 class FigureCollector:
     def __init__(self, **kwargs):
@@ -123,12 +128,26 @@ class FigureCanvasWebAggExt(FigureCanvasWebAggCore):
     manager: None | FigureManagerWebAggExt
     manager_class = _api.classproperty(lambda cls: FigureManagerWebAggExt)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._wants_delayed_draw = False
+        self._delayed_draw_dirty = False
+
     def handle_close(self, event):
         if self.manager is not None:
             self.manager.close()
         else:
             # Close immediately if no manager is present
             CloseEvent("close_event", self)._process()  # ty: ignore
+
+    def draw(self):
+        self._wants_delayed_draw = False
+        self._delayed_draw_dirty = False
+        super().draw()
+
+    def draw_idle(self):
+        self._wants_delayed_draw = True
+        self._delayed_draw_dirty = True
 
 
 @_Backend.export
