@@ -5,6 +5,7 @@ from starlette.applications import Starlette
 from starlette.routing import Match, Mount
 
 from mplbed.doc_helpers import PARAMS_DS as D
+from mplbed.doc_helpers import doc
 
 _native_app: ContextVar[Any] = ContextVar("_native_app", default=None)
 _prefix_and_app: ContextVar[tuple[str, Starlette] | None] = ContextVar(
@@ -13,16 +14,7 @@ _prefix_and_app: ContextVar[tuple[str, Starlette] | None] = ContextVar(
 
 
 class MplbedMiddleware:
-    def __init__(
-        self,
-        default_app,
-        *,
-        prefix: str,
-        app=None,
-        app_kwargs=None,
-        manage_routing=True,
-        native_app=None,
-    ):
+    @doc(
         f"""
         Initialize the MplbedMiddleware.
 
@@ -36,12 +28,24 @@ class MplbedMiddleware:
         {D.manage_routing}
         {D.native_app}
         """
+    )
+    def __init__(
+        self,
+        default_app,
+        *,
+        prefix: str,
+        app=None,
+        app_kwargs=None,
+        manage_routing=True,
+        native_app=None,
+    ):
         from mplbed.server import mplbed_app_factory
 
         self.main_app = default_app
         if app is None and not manage_routing:
             raise ValueError(
-                "If manage_routing is False, you must construct and provide the app yourself (otherwise how do you plan to route to it?)"
+                "If manage_routing is False, you must construct and provide the app yourself "
+                "(otherwise how do you plan to route to it?)"
             )
         if app is not None:
             self.mplbed_app = app
@@ -104,7 +108,8 @@ def url_path_for(name, **path_params):
         prefix_and_app = _prefix_and_app.get()
         if prefix_and_app is None:
             raise RuntimeError(
-                "Missing current prefix_and_app in context! Did you install the MlpbedMiddleware? (_prefix_and_app was not passed)"
+                "Missing current prefix_and_app in context! "
+                "Did you install the MlpbedMiddleware? (_prefix_and_app was not passed)"
             )
     prefix, app = prefix_and_app
     path = app.url_path_for(name, **path_params)

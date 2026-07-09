@@ -10,7 +10,7 @@ except ImportError as e:
 from mplbed.asgi import MplbedMiddleware
 from mplbed.consts import DEFAULT_PREFIX, HEAD_TEMPLATE_VARIABLE_NAME
 from mplbed.doc_helpers import PARAMS_DS as D
-from mplbed.doc_helpers import fdf
+from mplbed.doc_helpers import doc, fdf
 from mplbed.html.impl import default_figure_page_template
 from mplbed.html.raw import figure_page_html
 from mplbed.html.safe import head_content
@@ -84,14 +84,7 @@ globals().update(
 )
 
 
-def install_middleware(
-    app,
-    *,
-    prefix=DEFAULT_PREFIX,
-    mplbed_starlette_app=None,
-    mplbed_starlette_app_kwargs=None,
-    manage_routing=True,
-):
+@doc(
     f"""
     Install the mplbed middleware on the given Quart app.
 
@@ -105,6 +98,15 @@ def install_middleware(
     {D.manage_routing}
     {D.native_app}
     """
+)
+def install_middleware(
+    app,
+    *,
+    prefix=DEFAULT_PREFIX,
+    mplbed_starlette_app=None,
+    mplbed_starlette_app_kwargs=None,
+    manage_routing=True,
+):
     app.asgi_app = MplbedMiddleware(
         app.asgi_app,
         prefix=prefix,

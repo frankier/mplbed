@@ -22,7 +22,10 @@ class NoShowContextError(ValueError):
         if message is None:
             if funcname is None:
                 raise ValueError("Must provide either a message or a funcname")
-            message = f"Cannot call {funcname} without a ShowContext. Use `with FigureCollector(...):` to create a ShowContext."
+            message = (
+                f"Cannot call {funcname} without a ShowContext. "
+                "Use `with FigureCollector(...):` to create a ShowContext."
+            )
         super().__init__(message)
 
 
