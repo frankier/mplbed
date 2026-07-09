@@ -1,5 +1,6 @@
-from .consts import DEFAULT_PREFIX
 from typing import Any
+
+from .consts import DEFAULT_PREFIX
 
 
 def fdf(s):

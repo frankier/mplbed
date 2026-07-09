@@ -1,14 +1,13 @@
 from contextvars import ContextVar
-from typing import Any, Tuple
+from typing import Any
 
 from starlette.applications import Starlette
-from starlette.routing import Mount, Match
+from starlette.routing import Match, Mount
 
 from mplbed.doc_helpers import PARAMS_DS as D
 
-
 _native_app: ContextVar[Any] = ContextVar("_native_app", default=None)
-_prefix_and_app: ContextVar[Tuple[str, Starlette] | None] = ContextVar(
+_prefix_and_app: ContextVar[tuple[str, Starlette] | None] = ContextVar(
     "_prefix_and_app", default=None
 )
 

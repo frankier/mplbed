@@ -1,6 +1,6 @@
-from functools import wraps
 import inspect
-from typing import Any, Dict
+from functools import wraps
+from typing import Any
 
 
 def figure_standalone_docstring_factory(
@@ -155,7 +155,7 @@ def figure_page_factory(
                 @wraps(inner)
                 async def async_view_wrapper(*args, **kwargs):
                     actual_fig = await inner(*args, **kwargs)
-                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop(
+                    figure_standalone_kwargs: dict[str, Any] = kwargs.pop(
                         "figure_standalone_kwargs", {}
                     )
                     if needs_async:
@@ -199,7 +199,7 @@ def figure_page_factory(
                 @wraps(inner)
                 def view_wrapper(*args, **kwargs):
                     actual_fig = figure_standalone(*args, **kwargs)
-                    figure_standalone_kwargs: Dict[str, Any] = kwargs.pop(
+                    figure_standalone_kwargs: dict[str, Any] = kwargs.pop(
                         "figure_standalone_kwargs", {}
                     )
                     return figure_page(
@@ -288,7 +288,7 @@ def mk_figure_page_variants(
 
 
 def setup_page_docstring(template_func):
-    from mplbed.doc_helpers import fdf, PARAMS_DS, DotAccessDict
+    from mplbed.doc_helpers import PARAMS_DS, DotAccessDict, fdf
 
     def decorator(wrapped):
         wrapped.__doc__ = template_func(

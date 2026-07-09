@@ -1,6 +1,5 @@
 import anyio
 from anyio.lowlevel import EventLoopToken, current_token
-
 from starlette.websockets import WebSocket
 
 
@@ -8,7 +7,7 @@ def is_anyio_worker_thread() -> bool:
     from anyio._core._eventloop import threadlocals
 
     try:
-        getattr(threadlocals, "current_token")
+        threadlocals.current_token
     except AttributeError:
         return False
     else:

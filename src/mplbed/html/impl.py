@@ -59,6 +59,7 @@ def figure_html_from_id(
 
 def figure_html(figure, *retains, target="inline", on_close="msg_discrete"):
     from matplotlib.pyplot import _get_backend_mod as get_backend_mod
+
     from mplbed.server.impl import add_manager
 
     manager = get_backend_mod().new_figure_manager_given_figure(id(figure), figure)

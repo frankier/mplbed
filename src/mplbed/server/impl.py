@@ -1,22 +1,22 @@
-from abc import ABCMeta
 import io
-from anyio import create_task_group
-import matplotlib as mpl
-from matplotlib._pylab_helpers import Gcf
 import mimetypes
+from abc import ABCMeta
+
+import matplotlib as mpl
+from anyio import create_task_group
+from matplotlib._pylab_helpers import Gcf
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
-from starlette.routing import Route, Mount, WebSocketRoute
+from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
 from mplbed.server.utils import WorkerThreadWebSocket
 from mplbed.webaggext.impl import (
-    FigureManagerWebAggExt,
     FigureCollector,
+    FigureManagerWebAggExt,
 )
-
 
 managers = {}
 
@@ -37,6 +37,7 @@ def get_mpl_js(request):
 
 def get_webaggext_js(request):
     from importlib import resources as impresources
+
     import mplbed
 
     js_file = impresources.files(mplbed) / "webaggext" / "webaggext.js"

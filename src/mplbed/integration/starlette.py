@@ -1,9 +1,10 @@
-from starlette.templating import Jinja2Templates
 from starlette.responses import Response
+from starlette.templating import Jinja2Templates
 
 from mplbed.asgi import MplbedMiddleware
 from mplbed.consts import DEFAULT_PREFIX, HEAD_TEMPLATE_VARIABLE_NAME
-from mplbed.doc_helpers import PARAMS_DS as D, fdf
+from mplbed.doc_helpers import PARAMS_DS as D
+from mplbed.doc_helpers import fdf
 from mplbed.html.impl import default_figure_page_template, figure_page_html
 from mplbed.html.safe import head_content
 from mplbed.integration.common import mk_figure_page_variants, setup_page_docstring
