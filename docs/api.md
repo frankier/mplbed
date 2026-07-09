@@ -48,18 +48,10 @@ use in Jinja2 templates.
    :undoc-members:
 ```
 
-### Internals (`mplbed.html.impl`)
-
-```{eval-rst}
-.. automodule:: mplbed.html.impl
-   :members:
-   :undoc-members:
-```
-
 ## App Factory
 
 ```{eval-rst}
-.. automodule:: mplbed.server.impl
+.. automodule:: mplbed.server
    :members:
    :undoc-members:
 ```
