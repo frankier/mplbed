@@ -31,9 +31,7 @@ class NoShowContextError(ValueError):
 
 _new_figs_global: list[str] = []
 _new_figs_local: ContextVar[tuple[str, ...]] = ContextVar("_new_figs", default=())
-_current_show_context: ContextVar[ShowContext | None] = ContextVar(
-    "current_scope", default=None
-)
+_current_show_context: ContextVar[ShowContext | None] = ContextVar("current_scope", default=None)
 
 
 def require_show_context(funcname):
@@ -73,13 +71,11 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
 
     def show(self):
         from mplbed.html.raw import figure_html_from_id
-        from mplbed.server.impl import add_manager
+        from mplbed.server._impl import add_manager
 
         show_context = require_show_context("FigureManagerWebAggExt.show")
         add_manager(self)
-        html = figure_html_from_id(
-            self.num, target=show_context.target, on_close=show_context.on_close
-        )
+        html = figure_html_from_id(self.num, target=show_context.target, on_close=show_context.on_close)
         add_fig(html)
 
     def destroy(self):

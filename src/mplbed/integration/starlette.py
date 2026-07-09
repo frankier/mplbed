@@ -1,13 +1,13 @@
 from starlette.responses import Response
 from starlette.templating import Jinja2Templates
 
+from mplbed._doc_helpers import PARAMS_DS as D
+from mplbed._doc_helpers import doc, fdf
 from mplbed.asgi import MplbedMiddleware
 from mplbed.consts import DEFAULT_PREFIX, HEAD_TEMPLATE_VARIABLE_NAME
-from mplbed.doc_helpers import PARAMS_DS as D
-from mplbed.doc_helpers import doc, fdf
-from mplbed.html.impl import default_figure_page_template, figure_page_html
+from mplbed.html._impl import default_figure_page_template, figure_page_html
 from mplbed.html.safe import head_content
-from mplbed.integration.common import mk_figure_page_variants, setup_page_docstring
+from mplbed.integration._common import mk_figure_page_variants, setup_page_docstring
 
 
 def _mk_starlette_response(html):
@@ -110,13 +110,13 @@ def install_middleware(
 
 
 def register_context_processor(templates: Jinja2Templates):
-    """
-    Register a context processor for the given Starlette Jinja2Templates instance to inject head content.
+    """Register a context processor for the given Starlette Jinja2Templates instance to inject head content.
 
     Parameters
     ----------
     templates : Jinja2Templates
         The Jinja2Templates instance to register the context processor on.
+
     """
 
     def inject_head_content(request):

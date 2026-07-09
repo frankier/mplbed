@@ -11,8 +11,8 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
-from mplbed.server.utils import WorkerThreadWebSocket
-from mplbed.webaggext.impl import (
+from mplbed.server._utils import WorkerThreadWebSocket
+from mplbed.webaggext._impl import (
     FigureCollector,
     FigureManagerWebAggExt,
 )
@@ -49,9 +49,7 @@ async def download_fig(request):
     fig_id = request.path_params["fig_id"]
     fmt = request.path_params["fmt"]
     if fig_id not in managers:
-        raise HTTPException(
-            status_code=404, detail="Figure not found; It may have expired."
-        )
+        raise HTTPException(status_code=404, detail="Figure not found; It may have expired.")
     manager = managers[fig_id]
     buff = io.BytesIO()
     manager.canvas.figure.savefig(buff, format=fmt)
@@ -149,14 +147,13 @@ async def handle_websocket(websocket):
 
 
 def mplbed_app_factory():
+    """Create a Starlette app to act as the backend for webagg or webaggext."""
     from os.path import realpath
 
     routes = [
         Mount(
             "/_static",
-            app=StaticFiles(
-                directory=realpath(FigureManagerWebAggExt.get_static_file_path())
-            ),
+            app=StaticFiles(directory=realpath(FigureManagerWebAggExt.get_static_file_path())),
             name="static",
         ),
         Mount(

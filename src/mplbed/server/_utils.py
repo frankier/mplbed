@@ -21,13 +21,13 @@ class WorkerThreadWebSocket:
         self.token = token or current_token()
 
     def send_json(self, data):
-        """Send JSON data synchronously"""
+        """Send JSON data synchronously."""
         if not is_anyio_worker_thread():
             raise WorkerThreadOnlyError()
         return anyio.from_thread.run(self.websocket.send_json, data, token=self.token)  # ty: ignore
 
     def send_binary(self, data: bytes):
-        """Send binary data synchronously"""
+        """Send binary data synchronously."""
         if not is_anyio_worker_thread():
             raise WorkerThreadOnlyError()
         return anyio.from_thread.run(self.websocket.send_bytes, data, token=self.token)  # ty: ignore
