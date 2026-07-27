@@ -1,10 +1,3 @@
-try:
-    import quart
-except ImportError as e:
-    e.add_note("The mplbed Quart integration requires the Quart package. Please install it with `pip install quart`.")
-    raise
-
-
 from mplbed._doc_helpers import PARAMS_DS as D
 from mplbed._doc_helpers import doc, fdf
 from mplbed.asgi import MplbedMiddleware
@@ -13,6 +6,12 @@ from mplbed.html._impl import default_figure_page_template
 from mplbed.html.raw import figure_page_html
 from mplbed.html.safe import head_content
 from mplbed.integration._common import mk_figure_page_variants, setup_page_docstring
+
+try:
+    import quart
+except ModuleNotFoundError as e:
+    e.add_note("The mplbed Quart integration requires the Quart package. Please install it with `pip install quart`.")
+    raise
 
 
 def _mk_quart_response(html):
