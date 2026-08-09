@@ -19,12 +19,13 @@ class ExampleSpec:
     id: str
     subdir: str
     file: str
-    # "asgi" examples are run under `daphne` against `<module>:app`.
+    # "asgi" examples are run under `daphne` against `<module>:<asgi_symbol>`.
     # "script" examples are run directly with `python <file>` and must honour
     # a `PORT` environment variable.
     kind: str
     routes: tuple = ("/",)
     requires_mne_data: bool = False
+    asgi_symbol: str = "app"
 
     @property
     def path(self):
@@ -48,6 +49,14 @@ EXAMPLES = [
         requires_mne_data=True,
     ),
     ExampleSpec(id="quart-basic", subdir="quart", file="basic.py", kind="script", routes=("/", "/figure")),
+    ExampleSpec(
+        id="django-basic",
+        subdir="django",
+        file="asgi.py",
+        kind="asgi",
+        routes=("/", "/figure", "/figure-dtl"),
+        asgi_symbol="application",
+    ),
 ]
 
 
@@ -107,7 +116,7 @@ def running_example(spec: ExampleSpec, port: int = None):
     env = {**os.environ, "PORT": str(port)}
 
     if spec.kind == "asgi":
-        cmd = [sys.executable, "-m", "daphne", "-p", str(port), f"{spec.module_name}:app"]
+        cmd = [sys.executable, "-m", "daphne", "-p", str(port), f"{spec.module_name}:{spec.asgi_symbol}"]
     elif spec.kind == "script":
         cmd = [sys.executable, spec.file]
     else:
