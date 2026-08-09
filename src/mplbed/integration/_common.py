@@ -35,7 +35,7 @@ def figure_page_docstring_factory(*, response_name, template_comment, is_generic
     return f"""
     Decorator to create a {response_name} object containing the HTML for the given figure using {template_comment}.
 
-    This function can be called in two ways:
+    This function can be called in three ways:
     
     1. As a decorator for a function taking any number of arguments and
        returning a matplotlib Figure object, making it appropriate to use as a
@@ -43,6 +43,8 @@ def figure_page_docstring_factory(*, response_name, template_comment, is_generic
     2. As a decorator for a function taking no arguments and returning a
        matplotlib Figure object, making it appropriate to use as a decorator for a
        figure closure within a view/handler.
+    3. As a decorator factory taking keyword arguments to pass through to the
+       underlying function {wraps}, e.g. ``@figure_page(template=...)``.
     
     {generic_note}
 
@@ -142,14 +144,20 @@ def figure_page_factory(
 
     needs_async = inspect.iscoroutinefunction(figure_standalone)
 
-    def figure_page(inner, **figure_page_kwargs):
+    def figure_page(inner=None, **figure_page_kwargs):
+        if inner is None:
+            # Decorator factory style, e.g. @figure_page(template=...)
+            def decorator(inner):
+                return figure_page(inner, **figure_page_kwargs)
+
+            return decorator
         if inspect.iscoroutinefunction(inner):
             if _has_parameters(inner):
                 # Async view style figure creating function
                 @wraps(inner)
                 async def async_view_wrapper(*args, **kwargs):
-                    actual_fig = await inner(*args, **kwargs)
                     figure_standalone_kwargs: dict[str, Any] = kwargs.pop("figure_standalone_kwargs", {})
+                    actual_fig = await inner(*args, **kwargs)
                     if needs_async:
                         return await figure_standalone(
                             actual_fig,
@@ -186,17 +194,17 @@ def figure_page_factory(
                 # View style figure creating function
                 @wraps(inner)
                 def view_wrapper(*args, **kwargs):
-                    actual_fig = figure_standalone(*args, **kwargs)
                     figure_standalone_kwargs: dict[str, Any] = kwargs.pop("figure_standalone_kwargs", {})
-                    return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                    actual_fig = inner(*args, **kwargs)
+                    return figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
 
                 wrapper = view_wrapper
             else:
                 # Closure style figure creating function
                 @wraps(inner)
                 def closure_wrapper(*, figure_standalone_kwargs=EMPTY_DICT):
-                    actual_fig = figure_standalone()
-                    return figure_page(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
+                    actual_fig = inner()
+                    return figure_standalone(actual_fig, **{**figure_page_kwargs, **figure_standalone_kwargs})
 
                 wrapper = closure_wrapper
         wrapper.__name__ = name

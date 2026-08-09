@@ -15,6 +15,9 @@ cd examples/starlette && uv run daphne -p 8000 draw_idle:app
 
 # Quart
 cd examples/quart && uv run python basic.py
+
+# Django (via daphne)
+cd examples/django && uv run daphne -p 8000 asgi:application
 ```
 
 ## Starlette
@@ -83,5 +86,61 @@ The Jinja2 templates used by this example:
 **`templates/index.html`**
 
 ```{literalinclude} ../examples/quart/templates/index.html
+:language: html
+```
+
+## Django
+
+### Inline, iframe, and popup figures (`asgi.py` + `mysite/`)
+
+Runs a Django project under Daphne, following the
+[Django + Daphne deployment docs](https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/daphne/).
+`asgi.py` wraps the Django ASGI application with the mplbed middleware, and
+`mysite/views.py` embeds figures inline, inside an `<iframe>`, and as a modal
+popup, as well as demonstrating the raw and Django-template figure page
+decorators. Django templates get the `mplbed_head` variable from the mplbed
+context processor registered in `mysite/settings.py`.
+
+**`asgi.py`**
+
+```{literalinclude} ../examples/django/asgi.py
+:language: python
+```
+
+**`mysite/settings.py`**
+
+```{literalinclude} ../examples/django/mysite/settings.py
+:language: python
+```
+
+**`mysite/urls.py`**
+
+```{literalinclude} ../examples/django/mysite/urls.py
+:language: python
+```
+
+**`mysite/views.py`**
+
+```{literalinclude} ../examples/django/mysite/views.py
+:language: python
+```
+
+The Django templates used by this example:
+
+**`mysite/templates/base.html`**
+
+```{literalinclude} ../examples/django/mysite/templates/base.html
+:language: html
+```
+
+**`mysite/templates/index.html`**
+
+```{literalinclude} ../examples/django/mysite/templates/index.html
+:language: html
+```
+
+**`mysite/templates/figure.html`**
+
+```{literalinclude} ../examples/django/mysite/templates/figure.html
 :language: html
 ```
