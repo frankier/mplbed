@@ -5,8 +5,10 @@ from .html import raw as raw_html
 from .html import safe as safe_html
 from .integration import starlette as mplbed_starlette
 from .server import mplbed_app_factory
+from .webaggext import FigureCollector
 
 __all__ = [
+    "FigureCollector",
     "mplbed_starlette",
     "mplbed_app_factory",
     "raw_html",
