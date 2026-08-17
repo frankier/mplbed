@@ -2,6 +2,7 @@ from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 
 from matplotlib import _api
+from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import CloseEvent, _Backend
 from matplotlib.backends.backend_webagg_core import (
     FigureCanvasWebAggCore,
@@ -16,6 +17,7 @@ class ShowContext:
     on_close: str
     global_scope: bool = False
     _new_figs_token: Token | None = field(default=None, init=False, repr=False, compare=False)
+    _new_managers: list = field(default_factory=list, init=False, repr=False, compare=False)
 
 
 class NoShowContextError(ValueError):
@@ -65,6 +67,19 @@ def consume_figs(show_context):
         return cur
 
 
+def deregister_manager(manager):
+    """Remove *manager* from pyplot's global registry if still present.
+
+    Once a figure's HTML has been handed off to the mplbed server (which keeps
+    the manager alive in its own ``managers`` dict for the websocket), there is
+    no reason to keep it registered with pyplot. Leaving it registered would
+    cause ``plt.show()`` to re-show it on every later call, accumulating stale
+    figures.
+    """
+    if Gcf.figs.get(manager.num) is manager:
+        Gcf.destroy(manager)
+
+
 class FigureManagerWebAggExt(FigureManagerWebAgg):
     canvas: FigureCanvasWebAggExt
     _toolbar2_class = NavigationToolbar2WebAgg
@@ -112,6 +127,8 @@ class FigureCollector:
     def __exit__(self, exc_type, exc_val, exc_tb):
         assert self.token is not None
         _current_show_context.reset(self.token)
+        for manager in self.show_context._new_managers:
+            deregister_manager(manager)
 
     def consume_one(self):
         figs = consume_figs(self.show_context)
@@ -129,6 +146,14 @@ class FigureCollector:
 class FigureCanvasWebAggExt(FigureCanvasWebAggCore):
     manager: None | FigureManagerWebAggExt
     manager_class = _api.classproperty(lambda cls: FigureManagerWebAggExt)
+
+    @classmethod
+    def new_manager(cls, figure, num):
+        manager = super().new_manager(figure, num)
+        show_context = _current_show_context.get()
+        if show_context is not None:
+            show_context._new_managers.append(manager)
+        return manager
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -156,3 +181,16 @@ class FigureCanvasWebAggExt(FigureCanvasWebAggCore):
 class _BackendWebAggExt(_Backend):
     FigureCanvas = FigureCanvasWebAggExt
     FigureManager = FigureManagerWebAggExt
+
+    @classmethod
+    def show(cls, *, block=None):
+        show_context = _current_show_context.get()
+        if show_context is None:
+            return super().show(block=block)
+        # Within a collector context, only show figures created during this
+        # context. matplotlib's default `show` iterates every figure in the
+        # global pyplot registry, which would leak figures from concurrent
+        # requests (and stale figures) into this collector.
+        for manager in show_context._new_managers:
+            if Gcf.figs.get(manager.num) is manager:
+                manager.show()
