@@ -1,5 +1,9 @@
 import matplotlib
 
+from ._impl import FigureCollector
+
+__all__ = ["FigureCollector", "use"]
+
 
 def use(ext=True):
     """
