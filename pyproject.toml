@@ -25,6 +25,8 @@ docs = [
     "sphinx-autodoc-typehints>=2",
     "furo>=2024",
     "quart",
+    "django",
+    "daphne",
 ]
 test = [
     "pytest>=8",

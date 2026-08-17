@@ -29,6 +29,9 @@ def get_examples():
     examples = []
     for f in glob.glob("*/*.py"):
         path = Path(f)
+        if (path.parent / "__init__.py").exists():
+            # Modules inside a Python package are not directly runnable.
+            continue
         full_docstring = cleandoc(get_docstring(path))
         lines = full_docstring.splitlines() if full_docstring else []
         flags = []
@@ -78,6 +81,8 @@ def main():
     os.chdir(directory)
     if directory.name == "quart":
         os.execv(sys.executable, [sys.executable, selected_path.name])
+    elif directory.name == "django":
+        os.execv(sys.executable, [sys.executable, "-m", "daphne", "-p", "8000", "asgi:application"])
     else:
         os.execv(sys.executable, [sys.executable, "-m", "daphne", "-p", "8000", f"{selected_path.stem}:app"])
 

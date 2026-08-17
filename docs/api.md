@@ -18,6 +18,14 @@
    :undoc-members:
 ```
 
+### Django
+
+```{eval-rst}
+.. automodule:: mplbed.integration.django
+   :members:
+   :undoc-members:
+```
+
 ## ASGI Middleware
 
 ```{eval-rst}

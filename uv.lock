@@ -805,7 +805,7 @@ wheels = [
 
 [[package]]
 name = "mplbed"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "frozendict" },
@@ -823,6 +823,8 @@ demo = [
     { name = "questionary" },
 ]
 docs = [
+    { name = "daphne" },
+    { name = "django" },
     { name = "furo" },
     { name = "myst-parser" },
     { name = "quart" },
@@ -855,6 +857,8 @@ demo = [
     { name = "questionary" },
 ]
 docs = [
+    { name = "daphne" },
+    { name = "django" },
     { name = "furo", specifier = ">=2024" },
     { name = "myst-parser", specifier = ">=4" },
     { name = "quart" },
