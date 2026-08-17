@@ -18,3 +18,8 @@ if importlib.util.find_spec("quart") is not None:
     from .integration import quart as mplbed_quart  # noqa: F401
 
     __all__.append("mplbed_quart")
+
+if importlib.util.find_spec("django") is not None:
+    from .integration import django as mplbed_django  # noqa: F401
+
+    __all__.append("mplbed_django")
