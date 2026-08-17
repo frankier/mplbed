@@ -1,5 +1,5 @@
-from contextvars import ContextVar
-from dataclasses import dataclass
+from contextvars import ContextVar, Token
+from dataclasses import dataclass, field
 
 from matplotlib import _api
 from matplotlib.backend_bases import CloseEvent, _Backend
@@ -15,6 +15,7 @@ class ShowContext:
     target: str
     on_close: str
     global_scope: bool = False
+    _new_figs_token: Token | None = field(default=None, init=False, repr=False, compare=False)
 
 
 class NoShowContextError(ValueError):
@@ -46,7 +47,9 @@ def add_fig(html: str):
     if show_context.global_scope:
         _new_figs_global.append(html)
     else:
-        _new_figs_local.set((*_new_figs_local.get(), html))
+        token = _new_figs_local.set((*_new_figs_local.get(), html))
+        if show_context._new_figs_token is None:
+            show_context._new_figs_token = token
 
 
 def consume_figs(show_context):
@@ -56,7 +59,9 @@ def consume_figs(show_context):
         return new_figs
     else:
         cur = _new_figs_local.get()
-        _new_figs_local.set(())
+        if show_context._new_figs_token is not None:
+            _new_figs_local.reset(show_context._new_figs_token)
+            show_context._new_figs_token = None
         return cur
 
 
