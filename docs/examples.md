@@ -18,6 +18,25 @@ cd examples/quart && uv run python basic.py
 
 # Django (via daphne)
 cd examples/django && uv run daphne -p 8000 asgi:application
+
+# NiceGUI
+uv run python examples/nicegui/basic.py
+```
+
+## NiceGUI
+
+Install the optional integration with `uv add "mplbed[nicegui]"`. Call
+`setup(app)` before `ui.run()`, then configure each element through its owned
+`figure`. Calling `update()` after changing an artist redraws the live WebAgg
+canvas without replacing the NiceGUI element.
+
+### Two live figures (`basic.py`)
+
+Creates two client-owned figures, updates one independently, and demonstrates
+that standard NiceGUI classes and layout containers remain available.
+
+```{literalinclude} ../examples/nicegui/basic.py
+:language: python
 ```
 
 ## Starlette

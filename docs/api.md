@@ -2,6 +2,16 @@
 
 ## Integrations
 
+### NiceGUI
+
+Install the optional integration with `uv add "mplbed[nicegui]"`.
+
+```{eval-rst}
+.. automodule:: mplbed.integration.nicegui
+   :members:
+   :undoc-members:
+```
+
 ### Starlette
 
 ```{eval-rst}
