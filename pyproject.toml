@@ -11,12 +11,16 @@ dependencies = [
     "tornado>=6.5.5",
 ]
 
+[project.optional-dependencies]
+nicegui = ["nicegui>=3.15.0"]
+
 [dependency-groups]
 demo = [
   "mne>=1.12.1",
   "quart",
   "django",
   "daphne",
+  "nicegui>=3.15.0",
   "questionary"
 ]
 docs = [
@@ -27,8 +31,10 @@ docs = [
     "quart",
     "django",
     "daphne",
+    "nicegui>=3.15.0",
 ]
 test = [
+    "nicegui>=3.15.0",
     "pytest>=8",
     "pytest-playwright>=0.5",
     "pillow>=10",
