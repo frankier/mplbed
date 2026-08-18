@@ -1,5 +1,5 @@
 export default {
-  template: "<div></div>",
+  template: '<div :data-figure-id="figureId"></div>',
   props: {
     figureId: Number,
     websocketUrl: String,
