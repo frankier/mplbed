@@ -152,6 +152,101 @@ def test_pan_each_figure(example_spec, page):
         assert proc.poll() is None, f"{example_spec.id} exited early"
 
 
+def _nicegui_example():
+    return next(s for s in EXAMPLES if s.id == "nicegui-basic")
+
+
+def _nicegui_canvas(page, plot_class):
+    return page.locator(f".{plot_class} canvas.mpl-canvas")
+
+
+def _wait_for_canvas_change(page, plot_class, before):
+    page.wait_for_function(
+        """([selector, previous]) =>
+            document.querySelector(selector)?.toDataURL('image/png') !== previous""",
+        arg=[f".{plot_class} canvas.mpl-canvas", before],
+        timeout=15000,
+    )
+
+
+def test_nicegui_update_preserves_dom_and_other_figure(page):
+    spec = _nicegui_example()
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url, wait_until="load")
+        first = _nicegui_canvas(page, "plot-one")
+        second = _nicegui_canvas(page, "plot-two")
+        first.wait_for(state="visible", timeout=15000)
+        second.wait_for(state="visible", timeout=15000)
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+        first_before = first.evaluate("el => el.toDataURL('image/png')")
+        second_before = second.evaluate("el => el.toDataURL('image/png')")
+        first.evaluate("el => el.dataset.originalNode = 'true'")
+
+        page.get_by_role("button", name="Update first").click()
+        _wait_for_canvas_change(page, "plot-one", first_before)
+
+        assert first.evaluate("el => el.dataset.originalNode") == "true"
+        assert second.evaluate("el => el.toDataURL('image/png')") == second_before
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
+def test_nicegui_clients_own_independent_figures(page):
+    spec = _nicegui_example()
+    with running_example(spec) as (base_url, proc):
+        other_page = page.context.new_page()
+        try:
+            page.goto(base_url, wait_until="load")
+            other_page.goto(base_url, wait_until="load")
+            first_canvas = _nicegui_canvas(page, "plot-one")
+            other_canvas = _nicegui_canvas(other_page, "plot-one")
+            first_canvas.wait_for(state="visible", timeout=15000)
+            other_canvas.wait_for(state="visible", timeout=15000)
+            page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+            first_before = first_canvas.evaluate("el => el.toDataURL('image/png')")
+            other_before = other_canvas.evaluate("el => el.toDataURL('image/png')")
+
+            assert page.locator(".plot-one").get_attribute("data-figure-id") != other_page.locator(
+                ".plot-one"
+            ).get_attribute("data-figure-id")
+            page.get_by_role("button", name="Update first").click()
+            _wait_for_canvas_change(
+                page,
+                "plot-one",
+                first_before,
+            )
+            assert other_canvas.evaluate("el => el.toDataURL('image/png')") == other_before
+        finally:
+            other_page.close()
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
+def test_nicegui_delete_and_disconnect_release_managers(page):
+    spec = _nicegui_example()
+    browser_errors = []
+    page.on("console", lambda message: browser_errors.append(message.text) if message.type == "error" else None)
+    page.on("pageerror", lambda error: browser_errors.append(str(error)))
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url, wait_until="load")
+        first = _nicegui_canvas(page, "plot-one")
+        second = _nicegui_canvas(page, "plot-two")
+        first.wait_for(state="visible", timeout=15000)
+        second.wait_for(state="visible", timeout=15000)
+        first_id = page.locator(".plot-one").get_attribute("data-figure-id")
+        second_id = page.locator(".plot-two").get_attribute("data-figure-id")
+        assert first_id and second_id
+
+        page.get_by_role("button", name="Delete first").click()
+        page.locator(".plot-one").wait_for(state="detached", timeout=15000)
+        page.wait_for_timeout(500)
+        assert page.request.get(f"{base_url}/webagg/download/{first_id}.png").status == 404
+
+        page.goto("about:blank")
+        page.wait_for_timeout(500)
+        assert page.request.get(f"{base_url}/webagg/download/{second_id}.png").status == 404
+        assert not browser_errors
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
 def test_popup_spawn_dismiss_respawn(page):
     """
     For the popup example specifically: clicking the in-figure button spawns

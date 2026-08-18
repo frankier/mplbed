@@ -57,6 +57,7 @@ EXAMPLES = [
         routes=("/", "/figure", "/figure-dtl"),
         asgi_symbol="application",
     ),
+    ExampleSpec(id="nicegui-basic", subdir="nicegui", file="basic.py", kind="script"),
 ]
 
 
@@ -114,6 +115,7 @@ def running_example(spec: ExampleSpec, port: int = None):
         port = free_port()
     cwd = EXAMPLES_DIR / spec.subdir
     env = {**os.environ, "PORT": str(port)}
+    env.pop("PYTEST_CURRENT_TEST", None)
 
     if spec.kind == "asgi":
         cmd = [sys.executable, "-m", "daphne", "-p", str(port), f"{spec.module_name}:{spec.asgi_symbol}"]

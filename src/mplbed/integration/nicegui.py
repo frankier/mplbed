@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import weakref
 from dataclasses import dataclass
 from typing import Any
 
+import anyio
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.figure import Figure
 from matplotlib.pyplot import _get_backend_mod
@@ -69,6 +71,7 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
         if not hasattr(self._manager, "add_web_socket"):
             raise RuntimeError("The configured Matplotlib backend does not support WebAgg connections.")
         add_manager(self._manager)
+        self._draw_tasks: set[asyncio.Task[None]] = set()
 
         prefix_and_app = _setup_state.prefix_and_app
         self._props["figureId"] = self._manager.num
@@ -91,8 +94,32 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
 
     def update(self) -> None:
         """Schedule a redraw of the figure for connected clients."""
-        self.figure.canvas.draw_idle()
+        has_web_sockets = bool(self._manager.web_sockets)  # ty: ignore
+        if hasattr(self._manager, "wants_delayed_draw"):
+            should_wake_clients = has_web_sockets and not self._manager.wants_delayed_draw
+            self.figure.canvas.draw_idle()
+            if should_wake_clients:
+                self._run_in_worker(self.figure.canvas.send_event, "draw")  # ty: ignore
+        elif has_web_sockets:
+            self._run_in_worker(self.figure.canvas.draw_idle)
+        else:
+            self.figure.canvas.draw_idle()
         super().update()
+
+    def _run_in_worker(self, function: Any, *args: Any) -> None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        awaitable = anyio.to_thread.run_sync(function, *args)  # ty: ignore
+        task = loop.create_task(awaitable)
+        self._draw_tasks.add(task)
+        task.add_done_callback(self._finish_draw_task)
+
+    def _finish_draw_task(self, task: asyncio.Task[None]) -> None:
+        self._draw_tasks.discard(task)
+        if not task.cancelled():
+            task.exception()
 
     def _handle_delete(self) -> None:
         self.run_method("dispose")

@@ -1,6 +1,7 @@
 import importlib
 import subprocess
 import sys
+from importlib.metadata import requires
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -11,6 +12,7 @@ from nicegui.client import Client
 from nicegui.element import Element
 from nicegui.page import page
 from nicegui.testing.general import nicegui_reset_globals
+from packaging.requirements import Requirement
 from starlette.applications import Starlette
 
 from mplbed.server import mplbed_app_factory
@@ -163,6 +165,16 @@ def test_standard_element_styling_remains_chainable():
     assert plot.style("min-height: 10rem") is plot
 
 
+def test_basic_webagg_backend_can_update_before_connection():
+    integration = nicegui_integration()
+    integration.setup(app, use_webaggext_backend=False)
+
+    with client_context():
+        plot = integration.matplotlib()
+
+    plot.update()
+
+
 def test_deleting_an_unconnected_element_releases_its_manager():
     integration = nicegui_integration()
     integration.setup(app)
@@ -229,3 +241,15 @@ else:
     result = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True)
 
     assert result.returncode == 0, result.stderr
+
+
+def test_distribution_metadata_keeps_nicegui_optional():
+    requirements = requires("mplbed") or []
+    nicegui_requirements = [Requirement(requirement) for requirement in requirements if requirement.lower().startswith("nicegui")]
+
+    assert len(nicegui_requirements) == 1
+    requirement = nicegui_requirements[0]
+    assert str(requirement.specifier) == ">=3.15.0"
+    assert requirement.marker is not None
+    assert requirement.marker.evaluate({"extra": "nicegui"})
+    assert not requirement.marker.evaluate({"extra": ""})
