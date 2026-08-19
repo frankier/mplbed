@@ -189,3 +189,18 @@ def setup(
         from mplbed import webaggext
 
         webaggext.use(ext=use_webaggext_backend)
+
+
+# ruff: disable[F822]
+__all__ = [
+    "install_middleware",
+    "register_context_processor",
+    "setup",
+    "figure_standalone",
+    "figure_standalone_async",
+    "figure_standalone_jinja",
+    "figure_page",
+    "figure_page_async",
+    "figure_page_jinja",
+]
+# ruff: enable[F822]
