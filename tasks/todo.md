@@ -3,8 +3,8 @@
 ## Task 1: Package and verify NiceGUI 3.15
 
 **Acceptance criteria:**
-- [ ] `nicegui>=3.15.0` exists only in the `nicegui` extra and development/docs environments.
-- [ ] The lockfile resolves and plain mplbed metadata does not require NiceGUI.
+- [x] `nicegui>=3.15.0` exists only in the `nicegui` extra and development/docs environments.
+- [x] The lockfile resolves and plain mplbed metadata does not require NiceGUI.
 
 **Verification:** `uv lock --check` and package metadata tests.
 
@@ -13,8 +13,8 @@
 ## Task 2: Specify the Python API with tests
 
 **Acceptance criteria:**
-- [ ] Tests cover setup delegation/assets/idempotency and actionable pre-setup errors.
-- [ ] Tests cover owned figures, forwarded kwargs, context redraw, explicit redraw, chaining, and idempotent cleanup.
+- [x] Tests cover setup delegation/assets/idempotency and actionable pre-setup errors.
+- [x] Tests cover owned figures, forwarded kwargs, context redraw, explicit redraw, chaining, and idempotent cleanup.
 
 **Verification:** `uv run pytest tests/test_nicegui.py`.
 
@@ -23,9 +23,9 @@
 ## Task 3: Implement the live element path
 
 **Acceptance criteria:**
-- [ ] `setup`, `matplotlib`, and `Matplotlib` implement the public contract.
-- [ ] The Vue component mounts one existing mplbed WebAgg figure and closes it on unmount.
-- [ ] Server managers are released when the element or client is deleted.
+- [x] `setup`, `matplotlib`, and `Matplotlib` implement the public contract.
+- [x] The Vue component mounts one existing mplbed WebAgg figure and closes it on unmount.
+- [x] Server managers are released when the element or client is deleted.
 
 **Verification:** NiceGUI unit/integration tests pass.
 
@@ -33,14 +33,14 @@
 
 ## Checkpoint: Core API
 
-- [ ] Focused tests pass.
-- [ ] Lint and typecheck pass for changed source.
+- [x] Focused tests pass.
+- [x] Lint and typecheck pass for changed source.
 
 ## Task 4: Prove browser behavior
 
 **Acceptance criteria:**
-- [ ] Browser tests cover rendering, toolbar pan, live update without DOM replacement, independent plots, and cleanup.
-- [ ] No browser console errors occur during deletion/disconnect.
+- [x] Browser tests cover rendering, toolbar pan, live update without DOM replacement, independent plots, and cleanup.
+- [x] No browser console errors occur during deletion/disconnect.
 
 **Verification:** `uv run pytest tests/test_e2e.py -k nicegui`.
 
@@ -49,8 +49,8 @@
 ## Task 5: Document and package the integration
 
 **Acceptance criteria:**
-- [ ] README, API docs, examples docs, runnable example, and harness match the public API.
-- [ ] Built wheel exposes the optional extra and includes the component asset.
+- [x] README, API docs, examples docs, runnable example, and harness match the public API.
+- [x] Built wheel exposes the optional extra and includes the component asset.
 
 **Verification:** Sphinx build, distribution build, and artifact inspection pass.
 
@@ -59,8 +59,8 @@
 ## Task 6: Complete quality gates and review
 
 **Acceptance criteria:**
-- [ ] Full tests, lint, format, typecheck, docs, and build pass.
-- [ ] Five-axis code review has no unresolved required findings.
+- [x] Full tests, lint, format, typecheck, docs, and build pass.
+- [x] Five-axis code review has no unresolved required findings.
 
 **Verification:** Run every command listed in the spec.
 
