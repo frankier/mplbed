@@ -80,6 +80,16 @@ def deregister_manager(manager):
         Gcf.destroy(manager)
 
 
+def get_webaggext_js(name="webaggext"):
+    from importlib import resources as impresources
+
+    import mplbed
+
+    js_file = impresources.files(mplbed) / "webaggext" / f"{name}.js"
+    with js_file.open() as f:
+        return f.read()
+
+
 class FigureManagerWebAggExt(FigureManagerWebAgg):
     canvas: FigureCanvasWebAggExt
     _toolbar2_class = NavigationToolbar2WebAgg
@@ -114,6 +124,42 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
     @property
     def wants_delayed_draw(self):
         return self.canvas._wants_delayed_draw
+
+    @classmethod
+    def get_javascript(cls, stream=None, image_root="_images/"):
+        import json
+        from io import StringIO, TextIOBase
+
+        output = StringIO() if stream is None else stream
+        output: TextIOBase
+        output.write("window.mpl = {};\n")
+        output.write(f"mpl.IMAGE_ROOT = '{image_root}';\n")
+
+        output.write(get_webaggext_js("mpl"))
+
+        toolitems = []
+        for name, tooltip, image, method in cls.ToolbarCls.toolitems:
+            if name is None:
+                toolitems.append(["", "", "", ""])
+            else:
+                toolitems.append([name, tooltip, image, method])
+        output.write(f"mpl.toolbar_items = {json.dumps(toolitems)};\n\n")
+
+        extensions = []
+        for _filetype, ext in sorted(FigureCanvasWebAggCore.get_supported_filetypes_grouped().items()):
+            extensions.append(ext[0])
+        output.write("mpl.extensions = ")
+        json.dump(extensions, output)
+        output.write(";\n\n")
+        output.write("mpl.default_extension = ")
+        json.dump(FigureCanvasWebAggCore.get_default_filetype(), output)
+        output.write(";\n")
+
+        output.write(get_webaggext_js("webaggext"))
+
+        if stream is None:
+            assert isinstance(output, StringIO)
+            return output.getvalue()
 
 
 class FigureCollector:
