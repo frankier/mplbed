@@ -28,21 +28,9 @@ def add_manager(manager):
 def get_mpl_js(request):
     from mplbed.asgi import url_path_for
 
-    js_content = FigureManagerWebAggExt.get_javascript()
     images_url = url_path_for("data", path="images/")
-    js_content = js_content.replace("'_images/'", f"'{images_url}'")
+    js_content = FigureManagerWebAggExt.get_javascript(image_root=images_url)
     return Response(js_content, media_type="application/javascript")
-
-
-def get_webaggext_js(request):
-    from importlib import resources as impresources
-
-    import mplbed
-
-    js_file = impresources.files(mplbed) / "webaggext" / "webaggext.js"
-    with js_file.open() as f:
-        contents = f.read()
-    return Response(contents, media_type="application/javascript")
 
 
 async def download_fig(request):
@@ -162,7 +150,6 @@ def mplbed_app_factory():
             name="data",
         ),
         Route("/mpl.js", get_mpl_js, name="mpl_js"),
-        Route("/webaggext.js", get_webaggext_js, name="webaggext_js"),
         WebSocketRoute("/ws/{fig_id:int}", handle_websocket, name="websocket"),
         Route("/download/{fig_id:int}.{fmt}", download_fig, name="download_fig"),
     ]

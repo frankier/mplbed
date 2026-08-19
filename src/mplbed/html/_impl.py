@@ -111,12 +111,6 @@ def head_content(*, core=False, prefix_and_app=None):
         <script src="{mpl_js_uri}"></script>
     """.strip()
     )
-    webaggext_js_uri = url_path_for("webaggext_js", _prefix_and_app=prefix_and_app)
-    head_bits.append(
-        f"""
-        <script src="{webaggext_js_uri}"></script>
-    """.strip()
-    )
     head_bits.append(
         """
         <style>
