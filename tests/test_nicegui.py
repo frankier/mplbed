@@ -74,22 +74,31 @@ def test_setup_delegates_to_starlette_and_registers_assets_once(monkeypatch):
 def test_setup_creates_the_subapp_used_for_assets(monkeypatch):
     integration = nicegui_integration()
     mplbed_app = mplbed_app_factory()
-    monkeypatch.setattr(integration, "mplbed_app_factory", Mock(return_value=mplbed_app))
+    app_factory = Mock(return_value=mplbed_app)
+    monkeypatch.setattr(integration, "mplbed_app_factory", app_factory)
     starlette_setup = Mock()
     monkeypatch.setattr(integration.starlette, "setup", starlette_setup)
     monkeypatch.setattr(integration.ui, "add_head_html", Mock())
 
-    integration.setup(app)
+    integration.setup(app, mplbed_starlette_app_kwargs={"debug": True})
 
+    app_factory.assert_called_once_with(debug=True)
     starlette_setup.assert_called_once_with(
         app,
         prefix=integration.DEFAULT_PREFIX,
         mplbed_starlette_app=mplbed_app,
-        mplbed_starlette_app_kwargs=None,
+        mplbed_starlette_app_kwargs={"debug": True},
         manage_routing=True,
         do_use_mpl_backend=True,
         use_webaggext_backend=True,
     )
+
+
+def test_setup_requires_a_subapp_when_routing_is_not_managed():
+    integration = nicegui_integration()
+
+    with pytest.raises(ValueError, match="construct and provide"):
+        integration.setup(app, manage_routing=False)
 
 
 def test_setup_rejects_a_different_configuration():
