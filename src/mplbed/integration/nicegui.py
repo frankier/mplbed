@@ -190,7 +190,15 @@ def setup(
             return
         raise RuntimeError("mplbed's NiceGUI integration is already configured with different options.")
 
-    resolved_mplbed_app = mplbed_starlette_app or mplbed_app_factory()
+    if not manage_routing and mplbed_starlette_app is None:
+        raise ValueError(
+            "If manage_routing is False, you must construct and provide the mplbed Starlette app yourself."
+        )
+    resolved_mplbed_app = (
+        mplbed_starlette_app
+        if mplbed_starlette_app is not None
+        else mplbed_app_factory(**(mplbed_starlette_app_kwargs or {}))
+    )
     resolved_options = {**options, "mplbed_starlette_app": resolved_mplbed_app}
     starlette.setup(app, **resolved_options)
     ui.add_head_html(
