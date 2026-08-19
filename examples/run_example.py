@@ -79,7 +79,7 @@ def main():
     selected_path = selected.path
     directory = selected_path.parent
     os.chdir(directory)
-    if directory.name == "quart":
+    if directory.name in {"quart", "nicegui"}:
         os.execv(sys.executable, [sys.executable, selected_path.name])
     elif directory.name == "django":
         os.execv(sys.executable, [sys.executable, "-m", "daphne", "-p", "8000", "asgi:application"])
