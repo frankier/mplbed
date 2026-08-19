@@ -197,6 +197,10 @@ mpl.figure.prototype._init_canvas = function () {
         if (fig.ws.readyState != 1) {
             return;
         }
+        // This typically means element isn't visible
+        if (canvas_div.offsetParent === null) {
+            return;
+        }
         var nentries = entries.length;
         for (var i = 0; i < nentries; i++) {
             var entry = entries[i];
@@ -445,10 +449,8 @@ mpl.figure.prototype.handle_save = function (fig, _msg) {
 
 mpl.figure.prototype.handle_resize = function (fig, msg) {
     var size = msg['size'];
-    if (size[0] !== fig.canvas.width || size[1] !== fig.canvas.height) {
-        fig._resize_canvas(size[0], size[1], msg['forward']);
-        fig.send_message('refresh', {});
-    }
+    fig._resize_canvas(size[0], size[1], msg['forward']);
+    fig.send_message('refresh', {});
 };
 
 mpl.figure.prototype.handle_rubberband = function (fig, msg) {
