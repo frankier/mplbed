@@ -15,33 +15,33 @@ Add an optional NiceGUI element that owns one Matplotlib WebAgg figure, reuses m
 
 ### Phase 1: Foundation and contract
 
-- [ ] Task 1: Add NiceGUI optional/development metadata and inspect the pinned 3.15 API.
-- [ ] Task 2: Add failing unit tests for setup, element ownership, context redraw, explicit redraw, and cleanup.
+- [x] Task 1: Add NiceGUI optional/development metadata and inspect the pinned 3.15 API.
+- [x] Task 2: Add failing unit tests for setup, element ownership, context redraw, explicit redraw, and cleanup.
 
 ### Checkpoint: Foundation
 
-- [ ] Focused unit tests demonstrate the missing behavior and dependency metadata is valid.
+- [x] Focused unit tests demonstrate the missing behavior and dependency metadata is valid.
 
 ### Phase 2: Live integration
 
-- [ ] Task 3: Implement setup, the owned figure element, and lifecycle cleanup.
-- [ ] Task 4: Add the lifecycle-only Vue component and in-process integration tests.
-- [ ] Task 5: Add the NiceGUI example and browser tests for rendering, update-without-replacement, independence, pan, and cleanup.
+- [x] Task 3: Implement setup, the owned figure element, and lifecycle cleanup.
+- [x] Task 4: Add the lifecycle-only Vue component and in-process integration tests.
+- [x] Task 5: Add the NiceGUI example and browser tests for rendering, update-without-replacement, independence, pan, and cleanup.
 
 ### Checkpoint: Integration
 
-- [ ] NiceGUI-focused unit and browser tests pass.
+- [x] NiceGUI-focused unit and browser tests pass.
 
 ### Phase 3: Documentation and release gates
 
-- [ ] Task 6: Update README, API docs, examples docs, and example launcher support.
-- [ ] Task 7: Run full tests, lint, formatting, typecheck, docs, build, and packaging/import-isolation checks.
-- [ ] Task 8: Review the full diff for correctness, architecture, security, performance, and scope; address required findings.
+- [x] Task 6: Update README, API docs, examples docs, and example launcher support.
+- [x] Task 7: Run full tests, lint, formatting, typecheck, docs, build, and packaging/import-isolation checks.
+- [x] Task 8: Review the full diff for correctness, architecture, security, performance, and scope; address required findings.
 
 ### Checkpoint: Complete
 
-- [ ] All spec acceptance criteria and repository quality gates pass.
-- [ ] Changes are committed in reviewable increments and ready for human review.
+- [x] All spec acceptance criteria and repository quality gates pass.
+- [x] Changes are committed in reviewable increments and ready for human review.
 
 ## Risks and Mitigations
 
