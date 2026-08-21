@@ -41,6 +41,15 @@ that standard NiceGUI classes and layout containers remain available.
 
 ## Starlette
 
+### Plot inside a toggled parent (`display_none.py`)
+
+Demonstrates hiding and showing a scatter plot by toggling `display: none` on
+its parent element.
+
+```{literalinclude} ../examples/starlette/display_none.py
+:language: python
+```
+
 ### Single standalone figure (`draw_idle.py`)
 
 Demonstrates `draw_idle` with an interactive keyboard event: pressing Enter

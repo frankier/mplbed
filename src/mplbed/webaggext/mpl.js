@@ -217,34 +217,48 @@ mpl.figure.prototype._init_canvas = function () {
                 height = entry.contentRect.height;
             }
 
+            // Hidden elements report a zero-sized box. Writing that size to
+            // the canvas would clear its bitmap, so wait for a visible size.
+            if (width == 0 || height == 0) {
+                continue;
+            }
+
             // Keep the size of the canvas and rubber band canvas in sync with
             // the canvas container.
+            var pixel_width, pixel_height;
             if (entry.devicePixelContentBoxSize) {
                 // Chrome 84 implements new version of spec.
-                canvas.setAttribute(
-                    'width',
-                    entry.devicePixelContentBoxSize[0].inlineSize
-                );
-                canvas.setAttribute(
-                    'height',
-                    entry.devicePixelContentBoxSize[0].blockSize
-                );
+                pixel_width = entry.devicePixelContentBoxSize[0].inlineSize;
+                pixel_height = entry.devicePixelContentBoxSize[0].blockSize;
             } else {
-                canvas.setAttribute('width', width * fig.ratio);
-                canvas.setAttribute('height', height * fig.ratio);
+                pixel_width = Math.round(width * fig.ratio);
+                pixel_height = Math.round(height * fig.ratio);
+            }
+            var canvas_resized =
+                canvas.width !== pixel_width || canvas.height !== pixel_height;
+            if (canvas_resized) {
+                // Setting either dimension clears the canvas bitmap, even if
+                // the assigned value is unchanged.
+                canvas.setAttribute('width', pixel_width);
+                canvas.setAttribute('height', pixel_height);
             }
             /* This rescales the canvas back to display pixels, so that it
              * appears correct on HiDPI screens. */
             canvas.style.width = width + 'px';
             canvas.style.height = height + 'px';
 
-            rubberband_canvas.setAttribute('width', width);
-            rubberband_canvas.setAttribute('height', height);
+            var rubberband_width = Math.round(width);
+            var rubberband_height = Math.round(height);
+            if (rubberband_canvas.width !== rubberband_width) {
+                rubberband_canvas.setAttribute('width', rubberband_width);
+            }
+            if (rubberband_canvas.height !== rubberband_height) {
+                rubberband_canvas.setAttribute('height', rubberband_height);
+            }
 
-            // And update the size in Python. We ignore the initial 0/0 size
-            // that occurs as the element is placed into the DOM, which should
-            // otherwise not happen due to the minimum size styling.
-            if (width != 0 && height != 0) {
+            // Update Python only when the backing bitmap really changed. A
+            // same-size hide/show preserves the bitmap without a round trip.
+            if (canvas_resized) {
                 fig.request_resize(width, height);
             }
         }
@@ -522,7 +536,6 @@ mpl.figure.prototype.handle_navigate_mode = function (fig, msg) {
 
 mpl.figure.prototype.updated_canvas_event = function () {
     // Called whenever the canvas gets updated.
-    if (size[0] !== fig.canvas.width || size[1] !== fig.canvas.height) {
     this.send_message('ack', {});
 };
 
