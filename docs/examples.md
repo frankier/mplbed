@@ -1,4 +1,4 @@
-# Examples
+# Examples index
 
 All examples live under the `examples/` directory. Run them with:
 

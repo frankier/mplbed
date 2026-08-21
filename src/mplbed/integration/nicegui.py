@@ -210,3 +210,11 @@ def setup(
         options=options,
         prefix_and_app=(prefix, resolved_mplbed_app),
     )
+
+
+# ruff: disable[F822]
+__all__ = [
+    "matplotlib",
+    "setup",
+]
+# ruff: enable[F822]
