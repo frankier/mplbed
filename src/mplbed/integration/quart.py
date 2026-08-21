@@ -210,3 +210,19 @@ def iframe_for(endpoint, *, app=None, **kwargs):
     app = _require_native_app(app)
     url = app.url_for(endpoint, **kwargs)
     return Markup(f'<iframe src="{url}" width="100%" height="600" frameborder="0"></iframe>')
+
+
+# ruff: disable[F822]
+__all__ = [
+    "install_middleware",
+    "register_context_processor",
+    "setup",
+    "figure_standalone",
+    "figure_standalone_async",
+    "figure_standalone_jinja",
+    "figure_page",
+    "figure_page_async",
+    "figure_page_jinja",
+    "iframe_for",
+]
+# ruff: enable[F822]
