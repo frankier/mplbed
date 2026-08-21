@@ -146,8 +146,8 @@ def register_context_processor(templates: Jinja2Templates):
         context processor will be registered. Default is None.
     {p.do_install_middleware}
     {p.prefix}
-    {p.mplbed_starlette_app}
-    {p.mplbed_starlette_app_kwargs}
+    {p.mplbed_starlette_app()}
+    {p.mplbed_starlette_app_kwargs()}
     {p.manage_routing}
     do_register_context_processor : bool, optional
         Whether to register the mplbed context processor on the given app. By

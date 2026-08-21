@@ -172,8 +172,8 @@ def context_processor(request):
         ``DJANGO_SETTINGS_MODULE`` to be set in the environment.
     {p.do_install_middleware}
     {p.prefix}
-    {p.mplbed_starlette_app}
-    {p.mplbed_starlette_app_kwargs}
+    {p.mplbed_starlette_app()}
+    {p.mplbed_starlette_app_kwargs()}
     {p.manage_routing}
     {p.do_use_mpl_backend}
     {p.use_webaggext_backend}
