@@ -172,8 +172,8 @@ def context_processor(request):
         ``DJANGO_SETTINGS_MODULE`` to be set in the environment.
     {p.do_install_middleware}
     {p.prefix}
-    {p.mplbed_starlette_app}
-    {p.mplbed_starlette_app_kwargs}
+    {p.mplbed_starlette_app()}
+    {p.mplbed_starlette_app_kwargs()}
     {p.manage_routing}
     {p.do_use_mpl_backend}
     {p.use_webaggext_backend}
@@ -227,3 +227,19 @@ def iframe_for(endpoint, **kwargs):
 
     url = reverse(endpoint, **kwargs)
     return Markup(f'<iframe src="{url}" width="100%" height="600" frameborder="0"></iframe>')
+
+
+# ruff: disable[F822]
+__all__ = [
+    "install_middleware",
+    "context_processor",
+    "setup",
+    "figure_standalone",
+    "figure_standalone_async",
+    "figure_standalone_jinja",
+    "figure_page",
+    "figure_page_async",
+    "figure_page_jinja",
+    "iframe_for",
+]
+# ruff: enable[F822]

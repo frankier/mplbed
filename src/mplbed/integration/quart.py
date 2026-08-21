@@ -149,8 +149,8 @@ def register_context_processor(app):
         The Quart app to integrate with mplbed.
     {p.do_install_middleware}
     {p.prefix}
-    {p.mplbed_starlette_app}
-    {p.mplbed_starlette_app_kwargs}
+    {p.mplbed_starlette_app()}
+    {p.mplbed_starlette_app_kwargs()}
     {p.manage_routing}
     {p.do_register_context_processor}
     {p.do_use_mpl_backend}
@@ -210,3 +210,19 @@ def iframe_for(endpoint, *, app=None, **kwargs):
     app = _require_native_app(app)
     url = app.url_for(endpoint, **kwargs)
     return Markup(f'<iframe src="{url}" width="100%" height="600" frameborder="0"></iframe>')
+
+
+# ruff: disable[F822]
+__all__ = [
+    "install_middleware",
+    "register_context_processor",
+    "setup",
+    "figure_standalone",
+    "figure_standalone_async",
+    "figure_standalone_jinja",
+    "figure_page",
+    "figure_page_async",
+    "figure_page_jinja",
+    "iframe_for",
+]
+# ruff: enable[F822]

@@ -146,8 +146,8 @@ def register_context_processor(templates: Jinja2Templates):
         context processor will be registered. Default is None.
     {p.do_install_middleware}
     {p.prefix}
-    {p.mplbed_starlette_app}
-    {p.mplbed_starlette_app_kwargs}
+    {p.mplbed_starlette_app()}
+    {p.mplbed_starlette_app_kwargs()}
     {p.manage_routing}
     do_register_context_processor : bool, optional
         Whether to register the mplbed context processor on the given app. By
@@ -189,3 +189,18 @@ def setup(
         from mplbed import webaggext
 
         webaggext.use(ext=use_webaggext_backend)
+
+
+# ruff: disable[F822]
+__all__ = [
+    "install_middleware",
+    "register_context_processor",
+    "setup",
+    "figure_standalone",
+    "figure_standalone_async",
+    "figure_standalone_jinja",
+    "figure_page",
+    "figure_page_async",
+    "figure_page_jinja",
+]
+# ruff: enable[F822]
