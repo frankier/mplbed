@@ -53,18 +53,24 @@ def figure_page_docstring_factory(*, response_name, template_comment, is_generic
     Example
     -------
 
-    # Usage 1
-    @figure_page
-    {async_str} def my_handler(request):
-        return Figure()
-    
-    # Usage 2
-    {async_str} def my_handler(request):
-        # ...
+    Usage 1:
+
+    .. code-block:: python
+
         @figure_page
-        {async_str} def create_figure():
+        {async_str} def my_handler(request):
             return Figure()
-        return {await_str} create_figure()
+
+    Usage 2:
+
+    .. code-block:: python
+
+        {async_str} def my_handler(request):
+            # ...
+            @figure_page
+            {async_str} def create_figure():
+                return Figure()
+            return {await_str} create_figure()
 
     Parameters
     ----------
