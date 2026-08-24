@@ -13,6 +13,9 @@ def homepage(request):
     fig = Figure()
     ax = fig.add_subplot()
     ax.scatter([1, 2, 3], [1, 4, 2], color="red", s=200)
+    initially_hidden = "initially-hidden" in request.query_params
+    parent_style = ' style="display: none"' if initially_hidden else ""
+    button_label = "Show plot" if initially_hidden else "Hide plot"
 
     return Response(
         f"""<!DOCTYPE html>
@@ -22,8 +25,8 @@ def homepage(request):
     <title>Toggle a plot</title>
   </head>
   <body>
-    <button id="toggle-plot" type="button">Hide plot</button>
-    <div id="plot-parent">
+    <button id="toggle-plot" type="button">{button_label}</button>
+    <div id="plot-parent"{parent_style}>
       {raw_html.figure_html(fig)}
     </div>
     <script>

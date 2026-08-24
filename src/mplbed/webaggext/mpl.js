@@ -187,6 +187,8 @@ mpl.figure.prototype._init_canvas = function () {
         }
     }
 
+    var has_been_visible =
+        canvas_div.offsetWidth != 0 && canvas_div.offsetHeight != 0;
     this.resizeObserverInstance = new this.ResizeObserver(function (entries) {
         // There's no need to resize if the WebSocket is not connected:
         // - If it is still connecting, then we will get an initial resize from
@@ -222,7 +224,8 @@ mpl.figure.prototype._init_canvas = function () {
             if (width == 0 || height == 0) {
                 continue;
             }
-
+            var is_initial_show = !has_been_visible;
+            has_been_visible = true;
             // Keep the size of the canvas and rubber band canvas in sync with
             // the canvas container.
             var pixel_width, pixel_height;
@@ -256,10 +259,17 @@ mpl.figure.prototype._init_canvas = function () {
                 rubberband_canvas.setAttribute('height', rubberband_height);
             }
 
-            // Update Python only when the backing bitmap really changed. A
-            // same-size hide/show preserves the bitmap without a round trip.
-            if (canvas_resized) {
+            // An initially hidden canvas still needs its first visible size
+            // reported, even when that size matches the backing bitmap. Later
+            // same-size hide/show cycles preserve the bitmap without a round
+            // trip.
+            if (canvas_resized || is_initial_show) {
                 fig.request_resize(width, height);
+            }
+            if (is_initial_show) {
+                // A same-size server resize produces an empty diff image, so
+                // request a full image after the resize clears the bitmap.
+                fig.send_message('refresh', {});
             }
         }
     });
