@@ -21,12 +21,16 @@ def _mk_django_response(html):
     return HttpResponse(html)
 
 
-def _figure_page_html_dtl(fig, *, template):
+def _figure_page_html_dtl(fig, *, template, prevent_default_navigation=False):
     from django.template.loader import render_to_string
 
     from mplbed.html.safe import figure_html
 
-    fig_html = figure_html(fig, target="body")
+    fig_html = figure_html(
+        fig,
+        target="body",
+        prevent_default_navigation=prevent_default_navigation,
+    )
     return render_to_string(
         template,
         {

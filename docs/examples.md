@@ -33,7 +33,10 @@ canvas without replacing the NiceGUI element.
 ### Two live figures (`basic.py`)
 
 Creates two client-owned figures, updates one independently, and demonstrates
-that standard NiceGUI classes and layout containers remain available.
+that standard NiceGUI classes and layout containers remain available. The
+``/navigation`` page also compares normal embedding with
+``matplotlib(prevent_default_navigation=True)`` for plots that consume wheel
+or navigation-key input.
 
 ```{literalinclude} ../examples/nicegui/basic.py
 :language: python

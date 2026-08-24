@@ -41,7 +41,37 @@ function download_callback(template) {
     };
 }
 
-function new_fig(target, fig_id, ws_uri_str, download_fig_uri_str, on_close = "msg_discrete") {
+const navigation_keys = new Set([
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "PageUp",
+    "PageDown",
+    "Home",
+    "End",
+    " ",
+]);
+
+function prevent_default_navigation(fig) {
+    fig.canvas_div.addEventListener("wheel", function(event) {
+        event.preventDefault();
+    }, {passive: false});
+    fig.canvas_div.addEventListener("keydown", function(event) {
+        if (navigation_keys.has(event.key)) {
+            event.preventDefault();
+        }
+    });
+}
+
+function new_fig(
+    target,
+    fig_id,
+    ws_uri_str,
+    download_fig_uri_str,
+    on_close = "msg_discrete",
+    should_prevent_default_navigation = false,
+) {
     let websocket = new window._mpl_webagg_websocket_type(ws_uri_str);
     let fig = new mpl.figure(
         // A unique numeric identifier for the figure
@@ -53,6 +83,9 @@ function new_fig(target, fig_id, ws_uri_str, download_fig_uri_str, on_close = "m
         // The HTML element in which to place the figure
         target
     );
+    if (should_prevent_default_navigation) {
+        prevent_default_navigation(fig);
+    }
     fig.focus_on_mouseover = true;
     let close_cb;
     if (on_close == "msg_discrete") {
