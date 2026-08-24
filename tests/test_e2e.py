@@ -10,9 +10,8 @@ import io
 import json
 
 import pytest
-from PIL import Image
-
 from conftest import EXAMPLES, mne_sample_data_available, running_example
+from PIL import Image
 
 pytestmark = pytest.mark.e2e
 
@@ -210,6 +209,36 @@ def test_datapoints_reappear_after_parent_display_none(page):
         }
         assert message_types.isdisjoint({"resize", "refresh"})
         assert not browser_errors
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
+def test_initially_hidden_canvas_requests_image_when_shown(page):
+    """Showing an initially hidden canvas requests and renders image data."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    sent_frames = []
+    page.on(
+        "websocket",
+        lambda websocket: websocket.on("framesent", lambda frame: sent_frames.append(frame)),
+    )
+    with running_example(spec) as (base_url, proc):
+        response = page.goto(base_url + "?initially-hidden", wait_until="load")
+        assert response is not None and response.ok, page.content()
+        canvas = page.locator("#plot-parent canvas.mpl-canvas")
+        canvas.wait_for(state="hidden")
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+        sent_frames.clear()
+
+        page.get_by_role("button", name="Show plot").click()
+        canvas.wait_for(state="visible")
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+
+        message_types = {
+            json.loads(frame).get("type")
+            for frame in sent_frames
+            if isinstance(frame, str) and frame.startswith("{")
+        }
+        assert "resize" in message_types
+        assert not _is_blank(_canvas_png_bytes(canvas)), "canvas is blank after being shown"
         assert proc.poll() is None, f"{spec.id} exited early"
 
 
