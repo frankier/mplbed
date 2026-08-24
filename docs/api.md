@@ -70,7 +70,9 @@ use in Jinja2 templates.
 
 `mplbed_app_factory` accepts shared browser request-flow options. Resize
 requests default to one request in flight, so repeated observations retain only
-the latest pending non-zero size until rendering completes. Set
+the latest pending non-zero size until rendering completes, even when input
+events are queued between observations. Pending refresh requests likewise
+coalesce to the latest request. Set
 `resize_max_in_flight` to another positive integer only when experimenting with
 additional concurrent resize work.
 

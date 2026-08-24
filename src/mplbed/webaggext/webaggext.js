@@ -15,6 +15,15 @@ const REQUEST_POLICIES = {
         max_in_flight: "resize_max_in_flight",
         throttle_ms: null,
         ordering: "ordered",
+        coalesce_across_barriers: true,
+    },
+    refresh: {
+        retention: "latest",
+        completion: null,
+        max_in_flight: null,
+        throttle_ms: null,
+        ordering: "ordered",
+        coalesce_across_barriers: true,
     },
     motion_notify: {
         retention: "latest",
@@ -133,7 +142,11 @@ class RequestScheduler {
                 }
                 return true;
             }
-            if (entry.policy.retention === "all" && entry.policy.ordering === "ordered") {
+            if (
+                !policy.coalesce_across_barriers &&
+                entry.policy.retention === "all" &&
+                entry.policy.ordering === "ordered"
+            ) {
                 break;
             }
         }
