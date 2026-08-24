@@ -8,6 +8,15 @@ const FLOW_CONTROL_DEFAULTS = {
     scroll_throttle_ms: null,
 };
 
+const PAN_REQUEST_POLICY = {
+    retention: "latest",
+    completion: "motion_notify_completion",
+    max_in_flight: 1,
+    throttle_ms: null,
+    ordering: "ordered",
+    coalesce_across_barriers: true,
+};
+
 const REQUEST_POLICIES = {
     resize: {
         retention: "latest",
@@ -79,8 +88,13 @@ class RequestScheduler {
         fig.ws.addEventListener("close", () => this.clear());
     }
 
-    policy(type) {
-        const registered = REQUEST_POLICIES[type] || DEFAULT_POLICY;
+    policy(type, properties) {
+        const is_pan_motion = (
+            type === "motion_notify" &&
+            this.fig.navigate_mode === "PAN" &&
+            properties.buttons !== 0
+        );
+        const registered = is_pan_motion ? PAN_REQUEST_POLICY : (REQUEST_POLICIES[type] || DEFAULT_POLICY);
         const policy = {...registered};
         if (typeof policy.max_in_flight === "string") {
             policy.max_in_flight = this.config[policy.max_in_flight];
@@ -98,7 +112,7 @@ class RequestScheduler {
         if (this.closed) {
             return;
         }
-        const policy = this.policy(type);
+        const policy = this.policy(type, properties);
         const payload = {...properties};
         if (type === "close") {
             this.clear();
@@ -133,7 +147,7 @@ class RequestScheduler {
         }
         for (let index = this.queue.length - 1; index >= 0; index -= 1) {
             const entry = this.queue[index];
-            if (entry.type === type) {
+            if (entry.type === type && entry.policy.completion === policy.completion) {
                 if (policy.retention === "reduce") {
                     const step = (entry.payload.step || 0) + (payload.step || 0);
                     entry.payload = {...payload, step};
@@ -243,6 +257,12 @@ mpl.figure.prototype.send_message = function(type, properties) {
 mpl.figure.prototype.handle_resize_completion = function(fig, msg) {
     if (fig._request_scheduler) {
         fig._request_scheduler.complete("resize", msg.seq);
+    }
+};
+
+mpl.figure.prototype.handle_motion_notify_completion = function(fig, msg) {
+    if (fig._request_scheduler) {
+        fig._request_scheduler.complete("motion_notify", msg.seq);
     }
 };
 

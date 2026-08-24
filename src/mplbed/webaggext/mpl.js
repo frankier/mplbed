@@ -522,6 +522,7 @@ mpl.figure.prototype.handle_history_buttons = function (fig, msg) {
 };
 
 mpl.figure.prototype.handle_navigate_mode = function (fig, msg) {
+    fig.navigate_mode = msg['mode'];
     if (msg['mode'] === 'PAN') {
         fig.buttons['Pan'].classList.add('active');
         fig.buttons['Zoom'].classList.remove('active');

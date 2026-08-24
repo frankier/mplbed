@@ -25,6 +25,8 @@ FLOW_CONTROL_DEFAULTS = {
     "scroll_throttle_ms": None,
 }
 
+COMPLETION_CONTROLLED_REQUESTS = {"motion_notify", "resize"}
+
 
 def add_manager(manager):
     fig_id = manager.num
@@ -74,13 +76,17 @@ def close_fig(worker_websocket, fig_id, clean):
 CLEANUP_CLOSED = True
 
 
+def _send_completion(worker_websocket, request_type, seq):
+    worker_websocket.send_json({"type": f"{request_type}_completion", "seq": seq})
+
+
 def _draw_and_complete(manager, worker_websocket):
     if manager.canvas._delayed_draw_dirty:
         manager.canvas.draw()
-    completions = manager.canvas._pending_resize_completions
-    manager.canvas._pending_resize_completions = []
-    for seq in completions:
-        worker_websocket.send_json({"type": "resize_completion", "seq": seq})
+    completions = manager.canvas._pending_completions
+    manager.canvas._pending_completions = []
+    for request_type, seq in completions:
+        _send_completion(worker_websocket, request_type, seq)
 
 
 async def delayed_draw(manager, mpl_lock, worker_websocket):
@@ -131,10 +137,12 @@ async def handle_websocket(websocket):
                             )
                         fig_ids.remove(fig_id)
                     elif manager.wants_delayed_draw:
-                        if message["type"] == "resize" and "seq" in message:
-                            manager.canvas._pending_resize_completions.append(message["seq"])
+                        if message["type"] in COMPLETION_CONTROLLED_REQUESTS and "seq" in message:
+                            manager.canvas._pending_completions.append((message["type"], message["seq"]))
                         manager.canvas._wants_delayed_draw = False
                         tg.start_soon(delayed_draw, manager, mpl_lock, worker_websocket)
+                    elif message["type"] in COMPLETION_CONTROLLED_REQUESTS and "seq" in message:
+                        await websocket.send_json({"type": f"{message['type']}_completion", "seq": message["seq"]})
                 if not fig_ids:
                     break
     finally:
