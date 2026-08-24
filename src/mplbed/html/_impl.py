@@ -1,7 +1,35 @@
 from mplbed.asgi import url_path_for
 
 
-def figure_html_from_id(fig_id, *, target="inline", on_close="msg_discrete", prefix_and_app=None):
+def figure_html_from_id(
+    fig_id,
+    *,
+    target="inline",
+    on_close="msg_discrete",
+    prefix_and_app=None,
+    prevent_default_navigation=False,
+):
+    """Generate embeddable HTML for an existing figure manager.
+
+    Parameters
+    ----------
+    fig_id
+        The registered Matplotlib figure-manager identifier.
+    target
+        Where to create the figure: ``"inline"``, ``"body"``, or ``"modal"``.
+    on_close
+        Browser behavior to use when the figure WebSocket closes.
+    prefix_and_app
+        Optional explicit mplbed URL prefix and ASGI application pair.
+    prevent_default_navigation
+        Prevent browser scrolling for wheel, Arrow, PageUp/PageDown, Home/End,
+        and Space events while still forwarding them to Matplotlib.
+
+    Returns
+    -------
+    str
+        The figure's HTML container and setup script.
+    """
     from json import dumps
 
     ws_uri = url_path_for("websocket", fig_id=fig_id, _prefix_and_app=prefix_and_app)
@@ -28,13 +56,15 @@ def figure_html_from_id(fig_id, *, target="inline", on_close="msg_discrete", pre
     if on_close == "remove_dialog":
         on_close = ["remove_parent", "dialog"]
     on_close_js = dumps(on_close)
+    prevent_default_navigation_js = dumps(prevent_default_navigation)
     create_figure = f"""
     let fig = _mpl_webaggext.new_fig(
         {target_js},
         {fig_id},
         {ws_uri_str},
         {download_fig_uri_str},
-        {on_close_js}
+        {on_close_js},
+        {prevent_default_navigation_js}
     );
     """.strip()
     bits = (
@@ -53,7 +83,34 @@ def figure_html_from_id(fig_id, *, target="inline", on_close="msg_discrete", pre
     return "\n".join(bits)
 
 
-def figure_html(figure, *retains, target="inline", on_close="msg_discrete"):
+def figure_html(
+    figure,
+    *retains,
+    target="inline",
+    on_close="msg_discrete",
+    prevent_default_navigation=False,
+):
+    """Register and generate embeddable HTML for a Matplotlib figure.
+
+    Parameters
+    ----------
+    figure
+        The Matplotlib figure to embed.
+    *retains
+        Objects to keep alive with the figure manager.
+    target
+        Where to create the figure: ``"inline"``, ``"body"``, or ``"modal"``.
+    on_close
+        Browser behavior to use when the figure WebSocket closes.
+    prevent_default_navigation
+        Prevent browser scrolling for wheel, Arrow, PageUp/PageDown, Home/End,
+        and Space events while still forwarding them to Matplotlib.
+
+    Returns
+    -------
+    str
+        The figure's HTML container and setup script.
+    """
     from matplotlib.pyplot import _get_backend_mod as get_backend_mod
 
     from mplbed.server._impl import add_manager
@@ -66,7 +123,12 @@ def figure_html(figure, *retains, target="inline", on_close="msg_discrete"):
             figure._retains = []
         figure._retains.extend(retains)
     add_manager(manager)
-    return figure_html_from_id(manager.num, target=target, on_close=on_close)
+    return figure_html_from_id(
+        manager.num,
+        target=target,
+        on_close=on_close,
+        prevent_default_navigation=prevent_default_navigation,
+    )
 
 
 def default_figure_page_template(*, head, fig, title):
@@ -136,8 +198,34 @@ def head_content(*, core=False, prefix_and_app=None):
     return "\n".join(head_bits)
 
 
-def figure_page_html(fig, *, template=default_figure_page_template):
-    fig_html = figure_html(fig, target="body")
+def figure_page_html(
+    fig,
+    *,
+    template=default_figure_page_template,
+    prevent_default_navigation=False,
+):
+    """Generate a complete HTML page containing a Matplotlib figure.
+
+    Parameters
+    ----------
+    fig
+        The Matplotlib figure to embed.
+    template
+        A callable receiving the ``head``, ``title``, and ``fig`` HTML strings.
+    prevent_default_navigation
+        Prevent browser scrolling for wheel, Arrow, PageUp/PageDown, Home/End,
+        and Space events while still forwarding them to Matplotlib.
+
+    Returns
+    -------
+    str
+        A complete HTML page.
+    """
+    fig_html = figure_html(
+        fig,
+        target="body",
+        prevent_default_navigation=prevent_default_navigation,
+    )
     head = head_content(core=True)
     resp_html = template(head=head, title="figure", fig=fig_html)
     return resp_html

@@ -284,7 +284,10 @@ def test_nicegui_clients_own_independent_figures(page):
 def test_nicegui_delete_and_disconnect_release_managers(page):
     spec = _nicegui_example()
     browser_errors = []
-    page.on("console", lambda message: browser_errors.append(message.text) if message.type == "error" else None)
+    page.on(
+        "console",
+        lambda message: browser_errors.append(message.text) if message.type == "error" else None,
+    )
     page.on("pageerror", lambda error: browser_errors.append(str(error)))
     with running_example(spec) as (base_url, proc):
         page.goto(base_url, wait_until="load")
@@ -304,6 +307,97 @@ def test_nicegui_delete_and_disconnect_release_managers(page):
         page.goto("about:blank")
         page.wait_for_timeout(500)
         assert page.request.get(f"{base_url}/webagg/download/{second_id}.png").status == 404
+        assert not browser_errors
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
+def test_navigation_suppression_is_opt_in_and_preserves_plot_events(page):
+    spec = _nicegui_example()
+    browser_errors = []
+    page.on("console", lambda message: browser_errors.append(message.text) if message.type == "error" else None)
+    page.on("pageerror", lambda error: browser_errors.append(str(error)))
+    navigation_keys = (
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "PageUp",
+        "PageDown",
+        "Home",
+        "End",
+        "Space",
+    )
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url + "/navigation", wait_until="load")
+        default_canvas = _nicegui_canvas(page, "navigation-default")
+        captured_canvas = _nicegui_canvas(page, "navigation-captured")
+        default_canvas.wait_for(state="visible", timeout=15000)
+        captured_canvas.wait_for(state="visible", timeout=15000)
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+
+        def observe_defaults(canvas):
+            canvas.locator("xpath=..").evaluate(
+                """el => {
+                    window.navigationEvent = undefined;
+                    for (const type of ['keydown', 'wheel']) {
+                        el.addEventListener(type, event => {
+                            window.navigationEvent = {
+                                key: event.key,
+                                type: event.type,
+                                defaultPrevented: event.defaultPrevented,
+                            };
+                        });
+                    }
+                }"""
+            )
+
+        default_canvas.scroll_into_view_if_needed()
+        observe_defaults(default_canvas)
+        default_canvas.locator("xpath=..").click()
+        default_scroll = page.evaluate("window.scrollY")
+        page.keyboard.press("ArrowDown")
+        assert page.evaluate("window.navigationEvent.defaultPrevented") is False
+        page.wait_for_timeout(200)
+        assert page.evaluate("window.scrollY") > default_scroll
+        default_wheel_scroll = page.evaluate("window.scrollY")
+        page.mouse.wheel(0, 100)
+        assert page.evaluate("window.navigationEvent.defaultPrevented") is False
+        page.wait_for_timeout(200)
+        assert page.evaluate("window.scrollY") > default_wheel_scroll
+
+        captured_canvas.scroll_into_view_if_needed()
+        observe_defaults(captured_canvas)
+        captured_canvas.locator("xpath=..").click()
+        before = captured_canvas.evaluate("el => el.toDataURL('image/png')")
+        captured_scroll = page.evaluate("window.scrollY")
+        for key in navigation_keys:
+            page.keyboard.press(key)
+            assert page.evaluate("window.navigationEvent") == {
+                "key": " " if key == "Space" else key,
+                "type": "keydown",
+                "defaultPrevented": True,
+            }
+        page.wait_for_timeout(200)
+        assert page.evaluate("window.scrollY") == captured_scroll
+
+        for key in ("Enter", "KeyA"):
+            page.keyboard.press(key)
+            assert page.evaluate("window.navigationEvent.defaultPrevented") is False
+
+        page.keyboard.press("Tab")
+        assert page.evaluate("window.navigationEvent.defaultPrevented") is False
+        assert captured_canvas.locator("xpath=..").evaluate("el => document.activeElement !== el")
+
+        captured_canvas.locator("xpath=..").hover()
+        page.mouse.wheel(0, 100)
+        assert page.evaluate("window.navigationEvent") == {
+            "key": None,
+            "type": "wheel",
+            "defaultPrevented": True,
+        }
+        page.wait_for_timeout(200)
+        assert page.evaluate("window.scrollY") == captured_scroll
+        _wait_for_canvas_change(page, "navigation-captured", before)
         assert not browser_errors
         assert proc.poll() is None, f"{spec.id} exited early"
 

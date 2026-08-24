@@ -57,11 +57,14 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
 
     Parameters
     ----------
+    prevent_default_navigation
+        Whether to prevent browser scrolling for wheel, Arrow, PageUp/PageDown,
+        Home/End, and Space events. Defaults to ``False``.
     **figure_kwargs
         Keyword arguments forwarded to :class:`matplotlib.figure.Figure`.
     """
 
-    def __init__(self, **figure_kwargs: Any) -> None:
+    def __init__(self, *, prevent_default_navigation: bool = False, **figure_kwargs: Any) -> None:
         if _setup_state is None:
             raise RuntimeError("Call mplbed.integration.nicegui.setup(app) before creating a matplotlib element.")
 
@@ -86,6 +89,7 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
             fmt="{fmt}",
             _prefix_and_app=prefix_and_app,
         )
+        self._props["preventDefaultNavigation"] = prevent_default_navigation
 
     @property
     def figure(self) -> Figure:
@@ -130,11 +134,14 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
         super()._handle_delete()
 
 
-def matplotlib(**figure_kwargs: Any) -> Matplotlib:
+def matplotlib(*, prevent_default_navigation: bool = False, **figure_kwargs: Any) -> Matplotlib:
     """Create an interactive Matplotlib element with an owned figure.
 
     Parameters
     ----------
+    prevent_default_navigation
+        Whether to prevent browser scrolling for wheel, Arrow, PageUp/PageDown,
+        Home/End, and Space events. Defaults to ``False``.
     **figure_kwargs
         Keyword arguments forwarded to :class:`matplotlib.figure.Figure`.
 
@@ -143,7 +150,10 @@ def matplotlib(**figure_kwargs: Any) -> Matplotlib:
     Matplotlib
         The newly created NiceGUI element.
     """
-    return Matplotlib(**figure_kwargs)
+    return Matplotlib(
+        prevent_default_navigation=prevent_default_navigation,
+        **figure_kwargs,
+    )
 
 
 def setup(
