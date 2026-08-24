@@ -19,6 +19,14 @@ from mplbed.webaggext._impl import (
 
 managers = {}
 
+FLOW_CONTROL_DEFAULTS = {
+    "resize_max_in_flight": 1,
+    "motion_throttle_ms": None,
+    "scroll_throttle_ms": None,
+}
+
+COMPLETION_CONTROLLED_REQUESTS = {"motion_notify", "resize"}
+
 
 def add_manager(manager):
     fig_id = manager.num
@@ -29,7 +37,10 @@ def get_mpl_js(request):
     from mplbed.asgi import url_path_for
 
     images_url = url_path_for("data", path="images/")
-    js_content = FigureManagerWebAggExt.get_javascript(image_root=images_url)
+    js_content = FigureManagerWebAggExt.get_javascript(
+        image_root=images_url,
+        flow_control=request.app.state.flow_control,
+    )
     return Response(js_content, media_type="application/javascript")
 
 
@@ -65,12 +76,24 @@ def close_fig(worker_websocket, fig_id, clean):
 CLEANUP_CLOSED = True
 
 
-async def delayed_draw(manager, mpl_lock):
+def _send_completion(worker_websocket, request_type, seq):
+    worker_websocket.send_json({"type": f"{request_type}_completion", "seq": seq})
+
+
+def _draw_and_complete(manager, worker_websocket):
+    if manager.canvas._delayed_draw_dirty:
+        manager.canvas.draw()
+    completions = manager.canvas._pending_completions
+    manager.canvas._pending_completions = []
+    for request_type, seq in completions:
+        _send_completion(worker_websocket, request_type, seq)
+
+
+async def delayed_draw(manager, mpl_lock, worker_websocket):
     import anyio
 
     async with mpl_lock:
-        if manager.canvas._delayed_draw_dirty:
-            await anyio.to_thread.run_sync(manager.canvas.draw)  # ty: ignore
+        await anyio.to_thread.run_sync(_draw_and_complete, manager, worker_websocket)  # ty: ignore
 
 
 async def handle_websocket(websocket):
@@ -114,8 +137,12 @@ async def handle_websocket(websocket):
                             )
                         fig_ids.remove(fig_id)
                     elif manager.wants_delayed_draw:
+                        if message["type"] in COMPLETION_CONTROLLED_REQUESTS and "seq" in message:
+                            manager.canvas._pending_completions.append((message["type"], message["seq"]))
                         manager.canvas._wants_delayed_draw = False
-                        tg.start_soon(delayed_draw, manager, mpl_lock)
+                        tg.start_soon(delayed_draw, manager, mpl_lock, worker_websocket)
+                    elif message["type"] in COMPLETION_CONTROLLED_REQUESTS and "seq" in message:
+                        await websocket.send_json({"type": f"{message['type']}_completion", "seq": message["seq"]})
                 if not fig_ids:
                     break
     finally:
@@ -134,8 +161,33 @@ async def handle_websocket(websocket):
                     )
 
 
-def mplbed_app_factory():
-    """Create a Starlette app to act as the backend for webagg or webaggext."""
+def _positive_integer(name: str, value: int | None, *, optional: bool = False) -> int | None:
+    if optional and value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        qualifier = "a positive integer or None" if optional else "a positive integer"
+        raise ValueError(f"{name} must be {qualifier}")
+    return value
+
+
+def mplbed_app_factory(
+    *,
+    resize_max_in_flight: int = 1,
+    motion_throttle_ms: int | None = None,
+    scroll_throttle_ms: int | None = None,
+) -> Starlette:
+    """Create the Starlette backend app for WebAgg or WebAggExt.
+
+    Parameters
+    ----------
+    resize_max_in_flight : int, optional
+        Maximum resize requests awaiting completion. Must be positive; the
+        default is one.
+    motion_throttle_ms, scroll_throttle_ms : int or None, optional
+        Leading-and-trailing throttle interval for the corresponding browser
+        input stream. ``None`` (the default) preserves every event. Positive
+        values opt into sampled motion callbacks or aggregated scroll steps.
+    """
     from os.path import realpath
 
     routes = [
@@ -154,4 +206,9 @@ def mplbed_app_factory():
         Route("/download/{fig_id:int}.{fmt}", download_fig, name="download_fig"),
     ]
     app = Starlette(routes=routes)
+    app.state.flow_control = {
+        "resize_max_in_flight": _positive_integer("resize_max_in_flight", resize_max_in_flight),
+        "motion_throttle_ms": _positive_integer("motion_throttle_ms", motion_throttle_ms, optional=True),
+        "scroll_throttle_ms": _positive_integer("scroll_throttle_ms", scroll_throttle_ms, optional=True),
+    }
     return app

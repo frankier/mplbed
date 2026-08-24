@@ -242,6 +242,153 @@ def test_initially_hidden_canvas_requests_image_when_shown(page):
         assert proc.poll() is None, f"{spec.id} exited early"
 
 
+def test_resize_storm_is_bounded_and_completes_after_each_image(page):
+    """Rapid resize observations render the final size without a FIFO backlog."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    traffic = []
+
+    def observe_websocket(websocket):
+        websocket.on("framesent", lambda frame: traffic.append(("sent", frame)))
+        websocket.on("framereceived", lambda frame: traffic.append(("received", frame)))
+
+    page.on("websocket", observe_websocket)
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url, wait_until="load")
+        canvas = page.locator("#plot-parent canvas.mpl-canvas")
+        canvas.wait_for(state="visible", timeout=15000)
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+        traffic.clear()
+
+        final_size = canvas.evaluate(
+            """async el => {
+                const container = el.parentElement;
+                for (let offset = 0; offset < 40; offset += 1) {
+                    container.style.width = `${520 + offset}px`;
+                    container.style.height = `${360 + offset}px`;
+                    await new Promise(resolve => setTimeout(resolve, 5));
+                }
+                return {width: container.clientWidth, height: container.clientHeight};
+            }"""
+        )
+
+        page.wait_for_function(
+            """size => {
+                const canvas = document.querySelector('#plot-parent canvas.mpl-canvas');
+                return canvas && canvas.clientWidth === size.width && canvas.clientHeight === size.height;
+            }""",
+            arg=final_size,
+            timeout=15000,
+        )
+        page.wait_for_timeout(1000)
+
+        outstanding = set()
+        maximum_outstanding = 0
+        sent_resizes = []
+        completions = []
+        image_since_send = {}
+        for direction, frame in traffic:
+            if direction == "received" and not isinstance(frame, str):
+                for seq in outstanding:
+                    image_since_send[seq] = True
+                continue
+            if not isinstance(frame, str) or not frame.startswith("{"):
+                continue
+            message = json.loads(frame)
+            if direction == "sent" and message.get("type") == "resize":
+                sent_resizes.append(message)
+                outstanding.add(message["seq"])
+                image_since_send[message["seq"]] = False
+                maximum_outstanding = max(maximum_outstanding, len(outstanding))
+            elif direction == "received" and message.get("type") == "resize_completion":
+                seq = message["seq"]
+                assert image_since_send[seq], f"resize {seq} completed before its image"
+                outstanding.remove(seq)
+                completions.append(message)
+
+        assert sent_resizes
+        assert len(sent_resizes) < 40
+        assert maximum_outstanding == 1
+        assert not outstanding
+        assert [message["seq"] for message in completions] == [message["seq"] for message in sent_resizes]
+        assert round(sent_resizes[-1]["width"]) == final_size["width"]
+        assert round(sent_resizes[-1]["height"]) == final_size["height"]
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
+def test_pan_storm_is_bounded_and_completes_after_each_image(page):
+    """Rapid pan motions render the final position without a FIFO backlog."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    traffic = []
+
+    def observe_websocket(websocket):
+        websocket.on("framesent", lambda frame: traffic.append(("sent", frame)))
+        websocket.on("framereceived", lambda frame: traffic.append(("received", frame)))
+
+    page.on("websocket", observe_websocket)
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url, wait_until="load")
+        root = page.locator("#plot-parent .mpl-figure-root")
+        canvas = _canvas_for_root(root)
+        canvas.wait_for(state="visible", timeout=15000)
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+
+        before = canvas.evaluate("el => el.toDataURL('image/png')")
+        _pan_button_for_root(root).click()
+        page.wait_for_timeout(400)
+        traffic.clear()
+
+        box = canvas.bounding_box()
+        assert box is not None
+        x = box["x"] + box["width"] / 2
+        y = box["y"] + box["height"] / 2
+        page.mouse.move(x, y)
+        page.mouse.down()
+        page.mouse.move(x + PAN_DELTA[0], y + PAN_DELTA[1], steps=40)
+        page.mouse.up()
+
+        page.wait_for_function(
+            """previous => document.querySelector(
+                '#plot-parent canvas.mpl-canvas'
+            )?.toDataURL('image/png') !== previous""",
+            arg=before,
+            timeout=15000,
+        )
+        page.wait_for_timeout(1000)
+
+        outstanding = set()
+        maximum_outstanding = 0
+        sent_pan_motions = []
+        completions = []
+        image_since_send = {}
+        for direction, frame in traffic:
+            if direction == "received" and not isinstance(frame, str):
+                for seq in outstanding:
+                    image_since_send[seq] = True
+                continue
+            if not isinstance(frame, str) or not frame.startswith("{"):
+                continue
+            message = json.loads(frame)
+            if direction == "sent" and message.get("type") == "motion_notify" and "seq" in message:
+                sent_pan_motions.append(message)
+                outstanding.add(message["seq"])
+                image_since_send[message["seq"]] = False
+                maximum_outstanding = max(maximum_outstanding, len(outstanding))
+            elif direction == "received" and message.get("type") == "motion_notify_completion":
+                seq = message["seq"]
+                assert image_since_send[seq], f"pan motion {seq} completed before its image"
+                outstanding.remove(seq)
+                completions.append(message)
+
+        assert sent_pan_motions
+        assert len(sent_pan_motions) < 40
+        assert maximum_outstanding == 1
+        assert not outstanding
+        assert [message["seq"] for message in completions] == [
+            message["seq"] for message in sent_pan_motions
+        ]
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
 def _nicegui_example():
     return next(s for s in EXAMPLES if s.id == "nicegui-basic")
 

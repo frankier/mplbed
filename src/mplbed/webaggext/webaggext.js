@@ -1,5 +1,271 @@
 (function() {
 
+const raw_send_message = mpl.figure.prototype.send_message;
+
+const FLOW_CONTROL_DEFAULTS = {
+    resize_max_in_flight: 1,
+    motion_throttle_ms: null,
+    scroll_throttle_ms: null,
+};
+
+const PAN_REQUEST_POLICY = {
+    retention: "latest",
+    completion: "motion_notify_completion",
+    max_in_flight: 1,
+    throttle_ms: null,
+    ordering: "ordered",
+    coalesce_across_barriers: true,
+};
+
+const REQUEST_POLICIES = {
+    resize: {
+        retention: "latest",
+        completion: "resize_completion",
+        max_in_flight: "resize_max_in_flight",
+        throttle_ms: null,
+        ordering: "ordered",
+        coalesce_across_barriers: true,
+    },
+    refresh: {
+        retention: "latest",
+        completion: null,
+        max_in_flight: null,
+        throttle_ms: null,
+        ordering: "ordered",
+        coalesce_across_barriers: true,
+    },
+    motion_notify: {
+        retention: "latest",
+        completion: null,
+        max_in_flight: null,
+        throttle_ms: "motion_throttle_ms",
+        ordering: "ordered",
+    },
+    scroll: {
+        retention: "reduce",
+        completion: null,
+        max_in_flight: null,
+        throttle_ms: "scroll_throttle_ms",
+        ordering: "ordered",
+    },
+    ack: {
+        retention: "latest",
+        completion: null,
+        max_in_flight: null,
+        throttle_ms: null,
+        ordering: "bypass",
+    },
+    close: {
+        retention: "terminal",
+        completion: null,
+        max_in_flight: 1,
+        throttle_ms: null,
+        ordering: "bypass",
+    },
+};
+
+for (const type of ["supports_binary", "send_image_mode", "set_device_pixel_ratio"]) {
+    REQUEST_POLICIES[type] = REQUEST_POLICIES.ack;
+}
+
+const DEFAULT_POLICY = {
+    retention: "all",
+    completion: null,
+    max_in_flight: null,
+    throttle_ms: null,
+    ordering: "ordered",
+};
+
+class RequestScheduler {
+    constructor(fig) {
+        this.fig = fig;
+        this.config = {...FLOW_CONTROL_DEFAULTS, ...(mpl.flow_control || {})};
+        this.queue = [];
+        this.in_flight = new Map();
+        this.throttles = new Map();
+        this.next_seq = 1;
+        this.closed = false;
+        fig.ws.addEventListener("close", () => this.clear());
+    }
+
+    policy(type, properties) {
+        const is_pan_motion = (
+            type === "motion_notify" &&
+            this.fig.navigate_mode === "PAN" &&
+            properties.buttons !== 0
+        );
+        const registered = is_pan_motion ? PAN_REQUEST_POLICY : (REQUEST_POLICIES[type] || DEFAULT_POLICY);
+        const policy = {...registered};
+        if (typeof policy.max_in_flight === "string") {
+            policy.max_in_flight = this.config[policy.max_in_flight];
+        }
+        if (typeof policy.throttle_ms === "string") {
+            policy.throttle_ms = this.config[policy.throttle_ms];
+            if (policy.throttle_ms === null) {
+                policy.retention = "all";
+            }
+        }
+        return policy;
+    }
+
+    send(type, properties) {
+        if (this.closed) {
+            return;
+        }
+        const policy = this.policy(type, properties);
+        const payload = {...properties};
+        if (type === "close") {
+            this.clear();
+            raw_send_message.call(this.fig, type, payload);
+            return;
+        }
+        if (policy.ordering === "bypass") {
+            raw_send_message.call(this.fig, type, payload);
+            return;
+        }
+        if (type === "resize" && (payload.width === 0 || payload.height === 0)) {
+            return;
+        }
+
+        if (policy.retention === "all") {
+            for (const entry of this.queue) {
+                if (entry.policy.throttle_ms !== null) {
+                    entry.force = true;
+                }
+            }
+        }
+
+        if (!this.coalesce(type, payload, policy)) {
+            this.queue.push({type, payload, policy, force: false});
+        }
+        this.drain();
+    }
+
+    coalesce(type, payload, policy) {
+        if (policy.retention === "all") {
+            return false;
+        }
+        for (let index = this.queue.length - 1; index >= 0; index -= 1) {
+            const entry = this.queue[index];
+            if (entry.type === type && entry.policy.completion === policy.completion) {
+                if (policy.retention === "reduce") {
+                    const step = (entry.payload.step || 0) + (payload.step || 0);
+                    entry.payload = {...payload, step};
+                } else {
+                    entry.payload = payload;
+                }
+                return true;
+            }
+            if (
+                !policy.coalesce_across_barriers &&
+                entry.policy.retention === "all" &&
+                entry.policy.ordering === "ordered"
+            ) {
+                break;
+            }
+        }
+        return false;
+    }
+
+    drain() {
+        while (this.queue.length) {
+            const entry = this.queue[0];
+            if (!this.can_dispatch(entry)) {
+                return;
+            }
+            this.queue.shift();
+            this.dispatch(entry);
+        }
+    }
+
+    can_dispatch(entry) {
+        if (entry.policy.completion !== null) {
+            const in_flight = this.in_flight.get(entry.type);
+            if (in_flight && in_flight.size >= entry.policy.max_in_flight) {
+                return false;
+            }
+        }
+        if (entry.policy.throttle_ms !== null && !entry.force) {
+            const throttle = this.throttles.get(entry.type);
+            if (throttle && throttle.timer !== null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    dispatch(entry) {
+        if (entry.policy.completion !== null) {
+            const seq = this.next_seq;
+            this.next_seq += 1;
+            entry.payload.seq = seq;
+            if (!this.in_flight.has(entry.type)) {
+                this.in_flight.set(entry.type, new Set());
+            }
+            this.in_flight.get(entry.type).add(seq);
+        }
+        if (entry.policy.throttle_ms !== null) {
+            this.start_throttle(entry.type, entry.policy.throttle_ms);
+        }
+        raw_send_message.call(this.fig, entry.type, entry.payload);
+    }
+
+    start_throttle(type, throttle_ms) {
+        const current = this.throttles.get(type);
+        if (current && current.timer !== null) {
+            window.clearTimeout(current.timer);
+        }
+        const state = {timer: null};
+        state.timer = window.setTimeout(() => {
+            state.timer = null;
+            this.drain();
+        }, throttle_ms);
+        this.throttles.set(type, state);
+    }
+
+    complete(type, seq) {
+        if (this.closed) {
+            return;
+        }
+        const in_flight = this.in_flight.get(type);
+        if (!in_flight || !in_flight.delete(seq)) {
+            return;
+        }
+        this.drain();
+    }
+
+    clear() {
+        for (const state of this.throttles.values()) {
+            if (state.timer !== null) {
+                window.clearTimeout(state.timer);
+            }
+        }
+        this.queue = [];
+        this.in_flight.clear();
+        this.throttles.clear();
+        this.closed = true;
+    }
+}
+
+mpl.figure.prototype.send_message = function(type, properties) {
+    if (!this._request_scheduler) {
+        this._request_scheduler = new RequestScheduler(this);
+    }
+    this._request_scheduler.send(type, properties);
+};
+
+mpl.figure.prototype.handle_resize_completion = function(fig, msg) {
+    if (fig._request_scheduler) {
+        fig._request_scheduler.complete("resize", msg.seq);
+    }
+};
+
+mpl.figure.prototype.handle_motion_notify_completion = function(fig, msg) {
+    if (fig._request_scheduler) {
+        fig._request_scheduler.complete("motion_notify", msg.seq);
+    }
+};
+
 function close_fig(fig) {
     fig.ws.close();
     delete fig;

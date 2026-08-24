@@ -132,7 +132,7 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
         return self.canvas._wants_delayed_draw
 
     @classmethod
-    def get_javascript(cls, stream=None, image_root="_images/"):
+    def get_javascript(cls, stream=None, image_root="_images/", flow_control=None):
         import json
         from io import StringIO, TextIOBase
 
@@ -140,6 +140,8 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
         output: TextIOBase
         output.write("window.mpl = {};\n")
         output.write(f"mpl.IMAGE_ROOT = '{image_root}';\n")
+        if flow_control is not None:
+            output.write(f"mpl.flow_control = {json.dumps(flow_control, separators=(',', ':'), sort_keys=True)};\n")
 
         output.write(get_webaggext_js("mpl"))
 
@@ -239,6 +241,7 @@ class FigureCanvasWebAggExt(FigureCanvasWebAggCore):
         super().__init__(*args, **kwargs)
         self._wants_delayed_draw = False
         self._delayed_draw_dirty = False
+        self._pending_completions = []
 
     def handle_close(self, event):
         if self.manager is not None:
