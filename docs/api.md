@@ -68,6 +68,20 @@ use in Jinja2 templates.
 
 ## App Factory
 
+`mplbed_app_factory` accepts shared browser request-flow options. Resize
+requests default to one request in flight, so repeated observations retain only
+the latest pending non-zero size until rendering completes. Set
+`resize_max_in_flight` to another positive integer only when experimenting with
+additional concurrent resize work.
+
+`motion_throttle_ms` and `scroll_throttle_ms` default to `None`, preserving all
+callbacks and their current ordering. A positive integer enables independent
+leading-and-trailing throttling in milliseconds. Motion callbacks then receive
+the latest sampled state, while scroll callbacks receive summed steps with the
+latest coordinates and modifiers. Zero and negative values are invalid. Pass
+these options through an integration's `mplbed_starlette_app_kwargs`, or create
+and supply a configured app directly.
+
 ```{eval-rst}
 .. automodule:: mplbed.server
    :members:
