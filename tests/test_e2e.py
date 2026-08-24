@@ -534,7 +534,9 @@ def test_mne_help_popup_reopens(page):
             page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
             page.keyboard.press("?")
 
-            dialog = page.locator("dialog[open]")
+            # Keep matching after Escape removes `open` so the detach wait
+            # tracks websocket cleanup removing the dialog from the DOM.
+            dialog = page.locator("dialog")
             dialog.wait_for(state="visible", timeout=15000)
             popup_canvas = dialog.locator("canvas.mpl-canvas")
             popup_canvas.wait_for(state="visible", timeout=15000)
