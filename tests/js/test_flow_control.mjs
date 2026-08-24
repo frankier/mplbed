@@ -114,6 +114,63 @@ test("configured resize capacity allocates sequences only to sent requests", () 
     assert.equal(sent[2].width, 400);
 });
 
+test("pan motion retains the latest pending position until completion", () => {
+    const {fig, sent} = figure();
+    fig.navigate_mode = "PAN";
+    fig.send_message("motion_notify", {x: 1, buttons: 1});
+    fig.send_message("motion_notify", {x: 2, buttons: 1});
+    fig.send_message("refresh", {});
+    fig.send_message("motion_notify", {x: 3, buttons: 1});
+    fig.send_message("button_release", {x: 3, buttons: 0});
+
+    assert.deepEqual(sent, [{
+        type: "motion_notify",
+        figure_id: 12,
+        x: 1,
+        buttons: 1,
+        seq: 1,
+    }]);
+    fig.handle_motion_notify_completion(fig, {seq: 1});
+    assert.deepEqual(sent.map((message) => message.type), [
+        "motion_notify",
+        "motion_notify",
+        "refresh",
+        "button_release",
+    ]);
+    assert.equal(sent[1].x, 3);
+    assert.equal(sent[1].seq, 2);
+});
+
+test("motion outside pan mode remains lossless and completion-free", () => {
+    const {fig, sent} = figure();
+    fig.send_message("motion_notify", {x: 1, buttons: 0});
+    fig.send_message("motion_notify", {x: 2, buttons: 1});
+
+    assert.deepEqual(sent.map((message) => message.x), [1, 2]);
+    assert.ok(sent.every((message) => message.seq === undefined));
+});
+
+test("pan motion does not replace queued non-pan motion", () => {
+    const {fig, sent} = figure();
+    fig.send_message("resize", {width: 100, height: 100});
+    fig.send_message("resize", {width: 200, height: 200});
+    fig.send_message("motion_notify", {x: 1, buttons: 0});
+    fig.navigate_mode = "PAN";
+    fig.send_message("motion_notify", {x: 2, buttons: 1});
+
+    fig.handle_resize_completion(fig, {seq: 1});
+    assert.deepEqual(sent.map((message) => message.type), [
+        "resize",
+        "resize",
+        "motion_notify",
+        "motion_notify",
+    ]);
+    assert.equal(sent[2].x, 1);
+    assert.equal(sent[2].seq, undefined);
+    assert.equal(sent[3].x, 2);
+    assert.equal(sent[3].seq, 3);
+});
+
 test("motion and scroll remain lossless when throttles are disabled", () => {
     const {fig, sent} = figure();
     fig.send_message("motion_notify", {x: 1});

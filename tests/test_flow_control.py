@@ -49,13 +49,13 @@ def test_app_factory_embeds_flow_control_configuration():
     assert f"mpl.flow_control = {expected};" in javascript
 
 
-def test_delayed_draw_sends_resize_completions_after_image():
-    """Resize completions follow the image produced by their shared draw."""
+def test_delayed_draw_sends_completions_after_image():
+    """Request completions follow the image produced by their shared draw."""
     events = []
 
     class Canvas:
         _delayed_draw_dirty = True
-        _pending_resize_completions = [17, 18]
+        _pending_completions = [("resize", 17), ("motion_notify", 18)]
 
         def draw(self):
             events.append(("binary", b"image"))
@@ -71,9 +71,9 @@ def test_delayed_draw_sends_resize_completions_after_image():
     assert events == [
         ("binary", b"image"),
         ("json", {"type": "resize_completion", "seq": 17}),
-        ("json", {"type": "resize_completion", "seq": 18}),
+        ("json", {"type": "motion_notify_completion", "seq": 18}),
     ]
-    assert manager.canvas._pending_resize_completions == []
+    assert manager.canvas._pending_completions == []
 
 
 def test_completion_survives_an_intervening_synchronous_draw():
@@ -81,15 +81,15 @@ def test_completion_survives_an_intervening_synchronous_draw():
     events = []
     canvas = SimpleNamespace(
         _delayed_draw_dirty=False,
-        _pending_resize_completions=[19],
+        _pending_completions=[("motion_notify", 19)],
         draw=lambda: pytest.fail("the clean canvas must not be drawn again"),
     )
     websocket = SimpleNamespace(send_json=lambda message: events.append(message))
 
     _draw_and_complete(SimpleNamespace(canvas=canvas), websocket)
 
-    assert events == [{"type": "resize_completion", "seq": 19}]
-    assert canvas._pending_resize_completions == []
+    assert events == [{"type": "motion_notify_completion", "seq": 19}]
+    assert canvas._pending_completions == []
 
 
 def test_client_scheduler_contract():

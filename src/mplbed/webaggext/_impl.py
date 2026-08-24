@@ -207,7 +207,7 @@ class FigureCanvasWebAggExt(FigureCanvasWebAggCore):
         super().__init__(*args, **kwargs)
         self._wants_delayed_draw = False
         self._delayed_draw_dirty = False
-        self._pending_resize_completions = []
+        self._pending_completions = []
 
     def handle_close(self, event):
         if self.manager is not None:
