@@ -213,6 +213,79 @@ def test_datapoints_reappear_after_parent_display_none(page):
         assert proc.poll() is None, f"{spec.id} exited early"
 
 
+def test_resize_storm_is_bounded_and_completes_after_each_image(page):
+    """Rapid resize observations render the final size without a FIFO backlog."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    traffic = []
+
+    def observe_websocket(websocket):
+        websocket.on("framesent", lambda frame: traffic.append(("sent", frame)))
+        websocket.on("framereceived", lambda frame: traffic.append(("received", frame)))
+
+    page.on("websocket", observe_websocket)
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url, wait_until="load")
+        canvas = page.locator("#plot-parent canvas.mpl-canvas")
+        canvas.wait_for(state="visible", timeout=15000)
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+        traffic.clear()
+
+        final_size = canvas.evaluate(
+            """async el => {
+                const container = el.parentElement;
+                for (let offset = 0; offset < 40; offset += 1) {
+                    container.style.width = `${520 + offset}px`;
+                    container.style.height = `${360 + offset}px`;
+                    await new Promise(resolve => setTimeout(resolve, 5));
+                }
+                return {width: container.clientWidth, height: container.clientHeight};
+            }"""
+        )
+
+        page.wait_for_function(
+            """size => {
+                const canvas = document.querySelector('#plot-parent canvas.mpl-canvas');
+                return canvas && canvas.clientWidth === size.width && canvas.clientHeight === size.height;
+            }""",
+            arg=final_size,
+            timeout=15000,
+        )
+        page.wait_for_timeout(1000)
+
+        outstanding = set()
+        maximum_outstanding = 0
+        sent_resizes = []
+        completions = []
+        image_since_send = {}
+        for direction, frame in traffic:
+            if direction == "received" and not isinstance(frame, str):
+                for seq in outstanding:
+                    image_since_send[seq] = True
+                continue
+            if not isinstance(frame, str) or not frame.startswith("{"):
+                continue
+            message = json.loads(frame)
+            if direction == "sent" and message.get("type") == "resize":
+                sent_resizes.append(message)
+                outstanding.add(message["seq"])
+                image_since_send[message["seq"]] = False
+                maximum_outstanding = max(maximum_outstanding, len(outstanding))
+            elif direction == "received" and message.get("type") == "resize_completion":
+                seq = message["seq"]
+                assert image_since_send[seq], f"resize {seq} completed before its image"
+                outstanding.remove(seq)
+                completions.append(message)
+
+        assert sent_resizes
+        assert len(sent_resizes) < 40
+        assert maximum_outstanding == 1
+        assert not outstanding
+        assert [message["seq"] for message in completions] == [message["seq"] for message in sent_resizes]
+        assert round(sent_resizes[-1]["width"]) == final_size["width"]
+        assert round(sent_resizes[-1]["height"]) == final_size["height"]
+        assert proc.poll() is None, f"{spec.id} exited early"
+
+
 def _nicegui_example():
     return next(s for s in EXAMPLES if s.id == "nicegui-basic")
 
