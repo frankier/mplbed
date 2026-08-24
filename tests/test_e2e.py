@@ -7,6 +7,7 @@ blank.
 """
 import base64
 import io
+import json
 
 import pytest
 from PIL import Image
@@ -150,6 +151,66 @@ def test_pan_each_figure(example_spec, page):
                 )
             assert total, f"{example_spec.id}{route}: no figures found"
         assert proc.poll() is None, f"{example_spec.id} exited early"
+
+
+def test_datapoints_reappear_after_parent_display_none(page):
+    """A hidden and reshown canvas renders the same scatter datapoints."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    browser_errors = []
+    sent_frames = []
+    page.on(
+        "console",
+        lambda message: browser_errors.append(message.text) if message.type == "error" else None,
+    )
+    page.on("pageerror", lambda error: browser_errors.append(str(error)))
+    page.on(
+        "websocket",
+        lambda websocket: websocket.on("framesent", lambda frame: sent_frames.append(frame)),
+    )
+    with running_example(spec) as (base_url, proc):
+        response = page.goto(base_url, wait_until="load")
+        assert response is not None and response.ok, page.content()
+        canvas = page.locator("#plot-parent canvas.mpl-canvas")
+        page.wait_for_timeout(1000)
+        assert canvas.count(), browser_errors
+        canvas.wait_for(state="visible", timeout=15000)
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+
+        def red_pixel_count():
+            return canvas.evaluate(
+                """el => {
+                    const pixels = el.getContext('2d').getImageData(
+                        0, 0, el.width, el.height
+                    ).data;
+                    let count = 0;
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        if (pixels[i] > 180 && pixels[i + 1] < 100 && pixels[i + 2] < 100) {
+                            count += 1;
+                        }
+                    }
+                    return count;
+                }"""
+            )
+
+        before = red_pixel_count()
+        assert before > 0, "scatter datapoints were not rendered initially"
+        sent_frames.clear()
+
+        page.get_by_role("button", name="Hide plot").click()
+        canvas.wait_for(state="hidden")
+        page.get_by_role("button", name="Show plot").click()
+        canvas.wait_for(state="visible")
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+
+        assert red_pixel_count() == before, "scatter datapoints did not reappear"
+        message_types = {
+            json.loads(frame).get("type")
+            for frame in sent_frames
+            if isinstance(frame, str) and frame.startswith("{")
+        }
+        assert message_types.isdisjoint({"resize", "refresh"})
+        assert not browser_errors
+        assert proc.poll() is None, f"{spec.id} exited early"
 
 
 def _nicegui_example():

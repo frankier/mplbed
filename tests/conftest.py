@@ -38,6 +38,7 @@ class ExampleSpec:
 
 EXAMPLES = [
     ExampleSpec(id="starlette-demo_popup", subdir="starlette", file="demo_popup.py", kind="asgi"),
+    ExampleSpec(id="starlette-display_none", subdir="starlette", file="display_none.py", kind="asgi"),
     ExampleSpec(id="starlette-draw_idle", subdir="starlette", file="draw_idle.py", kind="asgi"),
     ExampleSpec(id="starlette-embed2_raw", subdir="starlette", file="embed2_raw.py", kind="asgi"),
     ExampleSpec(id="starlette-mount_app", subdir="starlette", file="mount_app.py", kind="asgi"),
