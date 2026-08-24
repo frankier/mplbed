@@ -63,17 +63,42 @@ test("resize sends immediately and retains only the latest non-zero pending size
     assert.equal(sent.length, 2);
 });
 
-test("ordered barriers keep resize coalescing within its causal segment", () => {
+test("drag events do not prevent pending resizes from coalescing", () => {
     const {fig, sent} = figure();
     fig.send_message("resize", {width: 100, height: 100});
     fig.send_message("resize", {width: 200, height: 200});
+    fig.send_message("motion_notify", {x: 1});
     fig.send_message("button_release", {button: 0});
+    fig.send_message("figure_leave", {});
     fig.send_message("resize", {width: 300, height: 300});
 
     fig.handle_resize_completion(fig, {seq: 1});
-    assert.deepEqual(sent.map((message) => message.type), ["resize", "resize", "button_release"]);
-    fig.handle_resize_completion(fig, {seq: 2});
-    assert.deepEqual(sent.map((message) => message.type), ["resize", "resize", "button_release", "resize"]);
+    assert.deepEqual(sent.map((message) => message.type), [
+        "resize",
+        "resize",
+        "motion_notify",
+        "button_release",
+        "figure_leave",
+    ]);
+    assert.equal(sent[1].width, 300);
+});
+
+test("pending refreshes coalesce across other queued events", () => {
+    const {fig, sent} = figure();
+    fig.send_message("resize", {width: 100, height: 100});
+    fig.send_message("resize", {width: 200, height: 200});
+    fig.send_message("refresh", {generation: 1});
+    fig.send_message("button_release", {button: 0});
+    fig.send_message("refresh", {generation: 2});
+
+    fig.handle_resize_completion(fig, {seq: 1});
+    assert.deepEqual(sent.map((message) => message.type), [
+        "resize",
+        "resize",
+        "refresh",
+        "button_release",
+    ]);
+    assert.equal(sent[2].generation, 2);
 });
 
 test("configured resize capacity allocates sequences only to sent requests", () => {
