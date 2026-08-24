@@ -1,7 +1,10 @@
+from functools import wraps
+
 from mplbed.html import _impl
 
 
 def _wrap_markupsafe(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         from markupsafe import Markup
 

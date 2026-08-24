@@ -58,7 +58,13 @@ EXAMPLES = [
         routes=("/", "/figure", "/figure-dtl"),
         asgi_symbol="application",
     ),
-    ExampleSpec(id="nicegui-basic", subdir="nicegui", file="basic.py", kind="script"),
+    ExampleSpec(
+        id="nicegui-basic",
+        subdir="nicegui",
+        file="basic.py",
+        kind="script",
+        routes=("/", "/navigation"),
+    ),
 ]
 
 

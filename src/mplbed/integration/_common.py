@@ -4,6 +4,8 @@ from typing import Any
 
 from frozendict import frozendict
 
+from mplbed._doc_helpers import PARAMS_DS
+
 EMPTY_DICT = frozendict()
 
 
@@ -24,6 +26,7 @@ def figure_standalone_docstring_factory(*, response_name, template_comment, is_a
     ----------
     fig : matplotlib.figure.Figure or callable
         A matplotlib Figure object or a callable that returns a Figure object.
+    {PARAMS_DS.prevent_default_navigation}
     {params_extra}
     """
 
@@ -74,6 +77,7 @@ def figure_page_docstring_factory(*, response_name, template_comment, is_generic
 
     Parameters
     ----------
+    {PARAMS_DS.prevent_default_navigation}
     {params_extra}
     """
 

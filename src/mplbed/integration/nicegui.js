@@ -4,6 +4,7 @@ export default {
     figureId: Number,
     websocketUrl: String,
     downloadUrl: String,
+    preventDefaultNavigation: Boolean,
   },
   mounted() {
     const pathPrefix = window.path_prefix || "";
@@ -13,6 +14,7 @@ export default {
       pathPrefix + this.websocketUrl,
       pathPrefix + this.downloadUrl,
       "remove",
+      this.preventDefaultNavigation,
     );
   },
   beforeUnmount() {
