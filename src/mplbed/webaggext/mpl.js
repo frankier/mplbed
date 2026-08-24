@@ -38,6 +38,7 @@ mpl.figure = function (figure_id, websocket, ondownload, parent_element) {
     this.rubberband_canvas = undefined;
     this.rubberband_context = undefined;
     this.format_dropdown = undefined;
+    this.canvas_has_image = false;
 
     this.image_mode = 'full';
 
@@ -74,6 +75,7 @@ mpl.figure = function (figure_id, websocket, ondownload, parent_element) {
             fig.context.clearRect(0, 0, fig.canvas.width, fig.canvas.height);
         }
         fig.context.drawImage(fig.imageObj, 0, 0);
+        fig.canvas_has_image = true;
     };
 
     this.imageObj.onunload = function () {
@@ -187,8 +189,6 @@ mpl.figure.prototype._init_canvas = function () {
         }
     }
 
-    var has_been_visible =
-        canvas_div.offsetWidth != 0 && canvas_div.offsetHeight != 0;
     this.resizeObserverInstance = new this.ResizeObserver(function (entries) {
         // There's no need to resize if the WebSocket is not connected:
         // - If it is still connecting, then we will get an initial resize from
@@ -224,8 +224,6 @@ mpl.figure.prototype._init_canvas = function () {
             if (width == 0 || height == 0) {
                 continue;
             }
-            var is_initial_show = !has_been_visible;
-            has_been_visible = true;
             // Keep the size of the canvas and rubber band canvas in sync with
             // the canvas container.
             var pixel_width, pixel_height;
@@ -239,11 +237,13 @@ mpl.figure.prototype._init_canvas = function () {
             }
             var canvas_resized =
                 canvas.width !== pixel_width || canvas.height !== pixel_height;
+            var canvas_had_image = fig.canvas_has_image;
             if (canvas_resized) {
                 // Setting either dimension clears the canvas bitmap, even if
                 // the assigned value is unchanged.
                 canvas.setAttribute('width', pixel_width);
                 canvas.setAttribute('height', pixel_height);
+                fig.canvas_has_image = false;
             }
             /* This rescales the canvas back to display pixels, so that it
              * appears correct on HiDPI screens. */
@@ -259,16 +259,15 @@ mpl.figure.prototype._init_canvas = function () {
                 rubberband_canvas.setAttribute('height', rubberband_height);
             }
 
-            // An initially hidden canvas still needs its first visible size
-            // reported, even when that size matches the backing bitmap. Later
-            // same-size hide/show cycles preserve the bitmap without a round
-            // trip.
-            if (canvas_resized || is_initial_show) {
+            // Report backing-store changes to Python. Later same-size
+            // hide/show cycles preserve the bitmap without a round trip.
+            if (canvas_resized) {
                 fig.request_resize(width, height);
             }
-            if (is_initial_show) {
-                // A same-size server resize produces an empty diff image, so
-                // request a full image after the resize clears the bitmap.
+            if (canvas_resized && canvas_had_image) {
+                // If the server already has this size, its resize draw is an
+                // empty diff. Request a full image to replace the bitmap that
+                // changing the canvas dimensions just cleared.
                 fig.send_message('refresh', {});
             }
         }
