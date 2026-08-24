@@ -49,4 +49,10 @@ PARAMS_DS: Any = DotAccessDict(
         typically be saved in cased it is needed by the specific integration,
         e.g. for rendering templates.
     """),
+    prevent_default_navigation=fdf("""
+    prevent_default_navigation : bool, optional
+        Prevent the browser's default scrolling behavior for wheel, Arrow,
+        PageUp/PageDown, Home/End, and Space events directed at the plot.
+        Events are still sent to Matplotlib. Default is False.
+    """),
 )

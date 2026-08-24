@@ -70,3 +70,33 @@ def test_concurrent_collectors_do_not_cross_contaminate(monkeypatch):
     assert len(shown["B"]) == 1
     assert set(shown["A"] + shown["B"]) == {1, 2}
     assert Gcf.get_all_fig_managers() == []
+
+
+@pytest.mark.parametrize("prevent_default_navigation", [False, True])
+def test_show_forwards_navigation_suppression(monkeypatch, prevent_default_navigation):
+    generated = []
+    monkeypatch.setattr(
+        "mplbed.html.raw.figure_html_from_id",
+        lambda fig_id, **kwargs: generated.append((fig_id, kwargs)) or "<figure>",
+    )
+
+    collector = FigureCollector(
+        target="inline",
+        on_close="remove",
+        prevent_default_navigation=prevent_default_navigation,
+    )
+    with collector:
+        plt.figure()
+        plt.show()
+
+    assert generated == [
+        (
+            1,
+            {
+                "target": "inline",
+                "on_close": "remove",
+                "prevent_default_navigation": prevent_default_navigation,
+            },
+        )
+    ]
+    assert collector.consume_one() == "<figure>"

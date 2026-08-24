@@ -26,11 +26,15 @@ def _require_native_app(app=None):
     return app
 
 
-async def _figure_page_html_jinja(fig, *, template, app=None):
+async def _figure_page_html_jinja(fig, *, template, app=None, prevent_default_navigation=False):
     from mplbed.html.safe import figure_html
 
     app = _require_native_app(app)
-    fig_html = figure_html(fig, target="body")
+    fig_html = figure_html(
+        fig,
+        target="body",
+        prevent_default_navigation=prevent_default_navigation,
+    )
     return await app.render_template(
         template,
         HEAD_TEMPLATE_VARIABLE_NAME=lambda core=False: head_content(core=core),

@@ -131,6 +131,19 @@ def test_matplotlib_owns_a_read_only_figure_and_forwards_kwargs():
         plot.figure = Figure()
 
 
+def test_matplotlib_exposes_navigation_suppression_without_forwarding_it_to_figure():
+    integration = nicegui_integration()
+    integration.setup(app)
+
+    with client_context():
+        default_plot = integration.matplotlib()
+        opted_in_plot = integration.matplotlib(prevent_default_navigation=True, figsize=(6, 4))
+
+    assert default_plot._props["preventDefaultNavigation"] is False
+    assert opted_in_plot._props["preventDefaultNavigation"] is True
+    assert opted_in_plot.figure.get_size_inches().tolist() == [6.0, 4.0]
+
+
 def test_update_schedules_a_redraw_and_preserves_element_updates(monkeypatch):
     integration = nicegui_integration()
     integration.setup(app)
