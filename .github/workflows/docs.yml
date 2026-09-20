@@ -4,24 +4,36 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # sphinx-polyversion builds one version per git ref
+          fetch-depth: 0
 
       - uses: astral-sh/setup-uv@v6
 
-      - name: Install dependencies
+      - name: Install Python
+        # before the parallel version builds start downloading it themselves
+        run: uv python install
+
+      - name: Install docs dependencies
         run: uv sync --group docs
 
+      - name: Create a local main branch
+        # sphinx-polyversion only builds local branches and tags
+        run: git rev-parse --verify --quiet refs/heads/main || git branch main HEAD
+
       - name: Build docs
-        run: uv run sphinx-build -b html docs docs/_build/html
+        run: uv run sphinx-polyversion -vv docs/poly.py
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/_build/html
+          path: build
 
   deploy:
     needs: build

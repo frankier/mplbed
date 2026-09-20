@@ -1,0 +1,22 @@
+{#-
+Version selector for the docs built by sphinx-polyversion (see docs/poly.py).
+The docs of a version are written to `<output>/<version>/`, so the site root is
+one level above the root of the current build, which is what `pathto('', 1)`
+points at. The version data is empty when the docs are built without
+polyversion, in which case nothing is rendered.
+-#}
+{% if revisions %}
+<details id="version-selector">
+  <summary>Version: {{ current.name }}{% if current.name == latest.name %} (latest){% endif %}</summary>
+  {% for title, refs in [("Tags", tags), ("Branches", branches)] %}
+    {%- if refs %}
+      <dl>
+        <dt>{{ title }}</dt>
+        {%- for ref in refs %}
+        <dd><a href="{{ pathto('', 1).rstrip('/') }}/../{{ ref.name }}/index.html">{{ ref.name }}</a></dd>
+        {%- endfor %}
+      </dl>
+    {%- endif %}
+  {% endfor %}
+</details>
+{% endif %}

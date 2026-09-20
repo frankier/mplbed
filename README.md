@@ -43,7 +43,9 @@ element with `mplbed.integration.nicegui.matplotlib`.
 
 ## Documentation
 
-The documentation includes [API docs](https://frankier.github.io/mplbed/api.html) and [examples](https://frankier.github.io/mplbed/examples.html).
+The docs are published at <https://frankier.github.io/mplbed/>, which redirects
+to the newest version. Every release is built under its own version (for example
+<https://frankier.github.io/mplbed/v0.3.0/>) and the sidebar links between them.
 
 ## Contributing
 
@@ -68,3 +70,8 @@ Lint, format and typecheck:
 Install the [prek](https://prek.j178.dev/) hook to run these automatically on commit:
 
     $ prek install
+
+Build the docs for every version, or only for the working tree:
+
+    $ uv run sphinx-polyversion docs/poly.py
+    $ uv run sphinx-polyversion -l docs/poly.py

@@ -1,6 +1,20 @@
+import os
+
 project = "mplbed"
 copyright = "2024, Frankie Robertson"
 author = "Frankie Robertson"
+
+# When built by sphinx-polyversion (see docs/poly.py), the metadata of the
+# revision being built is passed via the environment. It is added to
+# `html_context` as `current`, `latest`, `tags` and `branches`, which
+# `_templates/versioning.html` uses to render the version selector.
+if os.environ.get("POLYVERSION_DATA"):
+    from sphinx_polyversion import load
+
+    # importing GitRef registers it with the json decoder used by `load`
+    from sphinx_polyversion.git import GitRef  # noqa: F401
+
+    load(globals())
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -14,6 +28,21 @@ exclude_patterns = ["_build"]
 
 html_theme = "furo"
 html_static_path = ["_static"]
+html_css_files = ["css/version-selector.css"]
+
+# The version selector is added below the toc, but inside the scrollable area.
+html_sidebars = {
+    "**": [
+        "sidebar/brand.html",
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/ethical-ads.html",
+        "versioning.html",
+        "sidebar/scroll-end.html",
+        "sidebar/variant-selector.html",
+    ],
+}
 
 # MyST
 myst_enable_extensions = ["colon_fence"]
