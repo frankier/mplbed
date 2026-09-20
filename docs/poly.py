@@ -12,14 +12,26 @@ Or build only the working tree for a quick check (output goes to `build/local`):
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
+from shutil import rmtree
 from typing import Any
 
 from sphinx_polyversion import apply_overrides
 from sphinx_polyversion.builder import BuildError
 from sphinx_polyversion.driver import DefaultDriver
+from sphinx_polyversion.environment import Environment
 from sphinx_polyversion.git import Git, GitRef, GitRefType, file_predicate, refs_by_type
+from sphinx_polyversion.json import JSONable
 from sphinx_polyversion.pyvenv import VenvWrapper, VirtualPythonEnvironment
 from sphinx_polyversion.sphinx import SphinxBuilder
+
+
+class Docs(SphinxBuilder):
+    """`SphinxBuilder` that keeps Sphinx's doctrees out of the published docs."""
+
+    async def build(self, environment: Environment, output_dir: Path, data: JSONable) -> None:
+        """Build the docs and remove the doctree cache Sphinx writes beside them."""
+        await super().build(environment, output_dir, data)
+        rmtree(output_dir / ".doctrees", ignore_errors=True)
 
 
 class Uv(VirtualPythonEnvironment):
@@ -120,7 +132,7 @@ DefaultDriver(
         # only refs that contain the docs can be built
         predicate=file_predicate([src / "conf.py", Path("pyproject.toml")]),
     ),
-    builder=SphinxBuilder(src, args=SPHINX_ARGS),
+    builder=Docs(src, args=SPHINX_ARGS),
     env=Uv.factory(args=UV_ARGS),
     template_dir=root / src / "templates",
     data_factory=data,

@@ -5,16 +5,16 @@ copyright = "2024, Frankie Robertson"
 author = "Frankie Robertson"
 
 # When built by sphinx-polyversion (see docs/poly.py), the metadata of the
-# revision being built is passed via the environment and made available to the
-# templates as `current`, `latest`, `tags` and `branches`.
-current = None
+# revision being built is passed via the environment. It is added to
+# `html_context` as `current`, `latest`, `tags` and `branches`, which
+# `_templates/versioning.html` uses to render the version selector.
 if os.environ.get("POLYVERSION_DATA"):
     from sphinx_polyversion import load
-    from sphinx_polyversion.git import GitRef  # registers GitRef with the decoder
 
-    current: GitRef | None = load(globals())["current"]
+    # importing GitRef registers it with the json decoder used by `load`
+    from sphinx_polyversion.git import GitRef  # noqa: F401
 
-version = release = current.name if current else ""
+    load(globals())
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -30,7 +30,7 @@ html_theme = "furo"
 html_static_path = ["_static"]
 html_css_files = ["css/version-selector.css"]
 
-# The version selector is added below the toc, before furo's own sidebar items.
+# The version selector is added below the toc, but inside the scrollable area.
 html_sidebars = {
     "**": [
         "sidebar/brand.html",
@@ -38,8 +38,8 @@ html_sidebars = {
         "sidebar/scroll-start.html",
         "sidebar/navigation.html",
         "sidebar/ethical-ads.html",
-        "sidebar/scroll-end.html",
         "versioning.html",
+        "sidebar/scroll-end.html",
         "sidebar/variant-selector.html",
     ],
 }

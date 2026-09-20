@@ -2,7 +2,9 @@
 
 #version-selector {
     margin: var(--sidebar-item-spacing-vertical) var(--sidebar-item-spacing-horizontal) 0;
-    font-size: var(--sidebar-item-font-size, inherit);
+    padding-top: var(--sidebar-item-spacing-vertical);
+    border-top: 1px solid var(--color-sidebar-background-border);
+    font-size: var(--sidebar-item-font-size);
 }
 
 #version-selector summary {
