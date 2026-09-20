@@ -1,0 +1,37 @@
+/* Version selector rendered by _templates/versioning.html */
+
+#version-selector {
+    margin: var(--sidebar-item-spacing-vertical) var(--sidebar-item-spacing-horizontal) 0;
+    font-size: var(--sidebar-item-font-size, inherit);
+}
+
+#version-selector summary {
+    cursor: pointer;
+    color: var(--color-foreground-secondary);
+}
+
+#version-selector summary:hover {
+    color: var(--color-foreground-primary);
+}
+
+#version-selector dl {
+    margin: var(--sidebar-item-spacing-vertical) 0 0;
+}
+
+#version-selector dt {
+    color: var(--color-foreground-secondary);
+}
+
+#version-selector dd {
+    margin: 0;
+}
+
+#version-selector dd a {
+    display: block;
+    padding: var(--sidebar-item-spacing-vertical) var(--sidebar-item-spacing-horizontal);
+    color: var(--color-sidebar-link-text);
+}
+
+#version-selector dd a:hover {
+    background: var(--color-sidebar-item-background);
+}

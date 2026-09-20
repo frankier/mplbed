@@ -1,6 +1,20 @@
+import os
+
 project = "mplbed"
 copyright = "2024, Frankie Robertson"
 author = "Frankie Robertson"
+
+# When built by sphinx-polyversion (see docs/poly.py), the metadata of the
+# revision being built is passed via the environment and made available to the
+# templates as `current`, `latest`, `tags` and `branches`.
+current = None
+if os.environ.get("POLYVERSION_DATA"):
+    from sphinx_polyversion import load
+    from sphinx_polyversion.git import GitRef  # registers GitRef with the decoder
+
+    current: GitRef | None = load(globals())["current"]
+
+version = release = current.name if current else ""
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -14,6 +28,21 @@ exclude_patterns = ["_build"]
 
 html_theme = "furo"
 html_static_path = ["_static"]
+html_css_files = ["css/version-selector.css"]
+
+# The version selector is added below the toc, before furo's own sidebar items.
+html_sidebars = {
+    "**": [
+        "sidebar/brand.html",
+        "sidebar/search.html",
+        "sidebar/scroll-start.html",
+        "sidebar/navigation.html",
+        "sidebar/ethical-ads.html",
+        "sidebar/scroll-end.html",
+        "versioning.html",
+        "sidebar/variant-selector.html",
+    ],
+}
 
 # MyST
 myst_enable_extensions = ["colon_fence"]
