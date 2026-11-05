@@ -202,7 +202,7 @@ def test_deleting_an_unconnected_element_releases_its_manager():
     integration.setup(app)
     with client_context():
         plot = integration.matplotlib()
-        figure_id = plot.figure.canvas.manager.num
+        figure_id = plot._props["figureId"]
         assert managers[figure_id] is plot.figure.canvas.manager
 
         plot.delete()
@@ -215,7 +215,7 @@ def test_deleting_a_client_releases_unconnected_managers():
     integration.setup(app)
     with client_context():
         plot = integration.matplotlib()
-        figure_id = plot.figure.canvas.manager.num
+        figure_id = plot._props["figureId"]
 
         plot.client.delete()
 
