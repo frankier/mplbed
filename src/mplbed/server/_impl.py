@@ -1,5 +1,7 @@
 import io
 import mimetypes
+from itertools import count
+from threading import Lock
 
 import matplotlib as mpl
 from anyio import create_task_group
@@ -18,6 +20,8 @@ from mplbed.webaggext._impl import (
 )
 
 managers = {}
+_figure_ids = count(1)
+_manager_lock = Lock()
 
 FLOW_CONTROL_DEFAULTS = {
     "resize_max_in_flight": 1,
@@ -29,8 +33,20 @@ COMPLETION_CONTROLLED_REQUESTS = {"motion_notify", "resize"}
 
 
 def add_manager(manager):
-    fig_id = manager.num
-    managers[fig_id] = manager
+    """Register a manager and return its stable, process-local server ID.
+
+    Pyplot figure numbers can be reused while collected figures are still
+    served. Allocate independent IDs and never recycle them for other managers.
+    """
+    with _manager_lock:
+        fig_id = getattr(manager, "_mplbed_fig_id", None)
+        if fig_id is None:
+            fig_id = next(_figure_ids)
+            manager._mplbed_fig_id = fig_id
+        if fig_id in managers and managers[fig_id] is not manager:
+            raise ValueError(f"Figure ID {fig_id} is already registered to another manager")
+        managers[fig_id] = manager
+    return fig_id
 
 
 def get_mpl_js(request):

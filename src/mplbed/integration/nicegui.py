@@ -73,19 +73,19 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
         self._manager = _get_backend_mod().new_figure_manager_given_figure(id(self._figure), self._figure)
         if not hasattr(self._manager, "add_web_socket"):
             raise RuntimeError("The configured Matplotlib backend does not support WebAgg connections.")
-        add_manager(self._manager)
+        self._figure_id = add_manager(self._manager)
         self._draw_tasks: set[asyncio.Task[None]] = set()
 
         prefix_and_app = _setup_state.prefix_and_app
-        self._props["figureId"] = self._manager.num
+        self._props["figureId"] = self._figure_id
         self._props["websocketUrl"] = url_path_for(
             "websocket",
-            fig_id=self._manager.num,
+            fig_id=self._figure_id,
             _prefix_and_app=prefix_and_app,
         )
         self._props["downloadUrl"] = url_path_for(
             "download_fig",
-            fig_id=self._manager.num,
+            fig_id=self._figure_id,
             fmt="{fmt}",
             _prefix_and_app=prefix_and_app,
         )
@@ -127,10 +127,10 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
 
     def _handle_delete(self) -> None:
         self.run_method("dispose")
-        manager = managers.get(self._manager.num)
+        manager = managers.get(self._figure_id)
         if manager is self._manager and not manager.web_sockets:
             Gcf.destroy(manager)
-            managers.pop(manager.num, None)
+            managers.pop(self._figure_id, None)
         super()._handle_delete()
 
 

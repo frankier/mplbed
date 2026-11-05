@@ -14,7 +14,8 @@ def figure_html_from_id(
     Parameters
     ----------
     fig_id
-        The registered Matplotlib figure-manager identifier.
+        The server identifier returned by ``add_manager``, independent of the
+        Matplotlib figure number.
     target
         Where to create the figure: ``"inline"``, ``"body"``, or ``"modal"``.
     on_close
@@ -122,9 +123,9 @@ def figure_html(
         if not hasattr(figure, "_retains"):
             figure._retains = []
         figure._retains.extend(retains)
-    add_manager(manager)
+    fig_id = add_manager(manager)
     return figure_html_from_id(
-        manager.num,
+        fig_id,
         target=target,
         on_close=on_close,
         prevent_default_navigation=prevent_default_navigation,

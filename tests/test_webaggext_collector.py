@@ -9,14 +9,17 @@ import pytest
 from matplotlib._pylab_helpers import Gcf
 
 from mplbed import FigureCollector
+from mplbed.server._impl import add_manager, managers
 from mplbed.webaggext._impl import FigureManagerWebAggExt
 
 
 @pytest.fixture(autouse=True)
 def _clean_gcf():
     Gcf.destroy_all()
+    managers.clear()
     yield
     Gcf.destroy_all()
+    managers.clear()
 
 
 def test_show_only_shows_figures_created_in_context(monkeypatch):
@@ -86,12 +89,12 @@ def test_show_forwards_navigation_suppression(monkeypatch, prevent_default_navig
         prevent_default_navigation=prevent_default_navigation,
     )
     with collector:
-        plt.figure()
+        figure = plt.figure()
         plt.show()
 
     assert generated == [
         (
-            1,
+            add_manager(figure.canvas.manager),
             {
                 "target": "inline",
                 "on_close": "remove",
