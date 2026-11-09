@@ -21,7 +21,7 @@ def _mk_django_response(html):
     return HttpResponse(html)
 
 
-def _figure_page_html_dtl(fig, *, template, prevent_default_navigation=False):
+def _figure_page_html_dtl(fig, *, template, prevent_default_navigation=False, borderless=True):
     from django.template.loader import render_to_string
 
     from mplbed.html.safe import figure_html
@@ -34,7 +34,7 @@ def _figure_page_html_dtl(fig, *, template, prevent_default_navigation=False):
     return render_to_string(
         template,
         {
-            HEAD_TEMPLATE_VARIABLE_NAME: head_content(core=False),
+            HEAD_TEMPLATE_VARIABLE_NAME: head_content(core=False, borderless=borderless),
             "fig": fig_html,
         },
     )

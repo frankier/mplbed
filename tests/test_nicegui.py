@@ -66,7 +66,7 @@ def test_setup_delegates_to_starlette_and_registers_assets_once(monkeypatch):
 
     starlette_setup.assert_called_once_with(app, **kwargs)
     add_head_html.assert_called_once_with(
-        f"assets:{{'core': True, 'prefix_and_app': ('/plots', {mplbed_app!r})}}",
+        f"assets:{{'core': True, 'prefix_and_app': ('/plots', {mplbed_app!r}), 'borderless': True}}",
         shared=True,
     )
 
@@ -92,6 +92,18 @@ def test_setup_creates_the_subapp_used_for_assets(monkeypatch):
         do_use_mpl_backend=True,
         use_webaggext_backend=True,
     )
+
+
+def test_setup_can_keep_the_figure_frame(monkeypatch):
+    integration = nicegui_integration()
+    head_content = Mock(return_value="assets")
+    monkeypatch.setattr(integration, "head_content", head_content)
+    monkeypatch.setattr(integration.starlette, "setup", Mock())
+    monkeypatch.setattr(integration.ui, "add_head_html", Mock())
+
+    integration.setup(app, borderless=False)
+
+    assert head_content.call_args.kwargs["borderless"] is False
 
 
 def test_setup_requires_a_subapp_when_routing_is_not_managed():

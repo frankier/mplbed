@@ -30,7 +30,7 @@ def _require_native_app(app=None):
     return app
 
 
-async def _figure_page_html_jinja(fig, *, template, app=None, prevent_default_navigation=False):
+async def _figure_page_html_jinja(fig, *, template, app=None, prevent_default_navigation=False, borderless=True):
     from mplbed.html.safe import figure_html
 
     app = _require_native_app(app)
@@ -41,7 +41,9 @@ async def _figure_page_html_jinja(fig, *, template, app=None, prevent_default_na
     )
     return await app.render_template(
         template,
-        HEAD_TEMPLATE_VARIABLE_NAME=lambda core=False: head_content(core=core),
+        HEAD_TEMPLATE_VARIABLE_NAME=lambda core=False, borderless=borderless: head_content(
+            core=core, borderless=borderless
+        ),
         fig=fig_html,
     )
 
@@ -131,7 +133,9 @@ def register_context_processor(app):
     @app.context_processor
     async def inject_head_content():
         return {
-            HEAD_TEMPLATE_VARIABLE_NAME: lambda core=False: head_content(core=core),
+            HEAD_TEMPLATE_VARIABLE_NAME: lambda core=False, borderless=True: head_content(
+                core=core, borderless=borderless
+            ),
         }
 
     return inject_head_content

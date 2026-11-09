@@ -155,7 +155,12 @@ default_figure_page_template.__doc__ = (
 del _template_preview, _indented
 
 
-def head_content(*, core=False, prefix_and_app=None):
+def head_content(*, core=False, prefix_and_app=None, borderless=True):
+    """Return WebAgg assets and styles for a page.
+
+    Set ``borderless=False`` to retain the figure title bar and canvas border.
+    This option applies to every mplbed figure on the page.
+    """
     css_files = []
     if not core:
         css_files.extend(["page", "boilerplate", "fbm"])
@@ -196,6 +201,19 @@ def head_content(*, core=False, prefix_and_app=None):
         </style>
     """.strip()
     )
+    if borderless:
+        head_bits.append(
+            """
+            <style>
+            .mpl-figure-root > .ui-dialog-titlebar {
+                display: none;
+            }
+            .mpl-figure-root > .mpl-canvas-container {
+                border: 0 !important;
+            }
+            </style>
+            """.strip()
+        )
     return "\n".join(head_bits)
 
 
@@ -204,6 +222,7 @@ def figure_page_html(
     *,
     template=default_figure_page_template,
     prevent_default_navigation=False,
+    borderless=True,
 ):
     """Generate a complete HTML page containing a Matplotlib figure.
 
@@ -216,6 +235,8 @@ def figure_page_html(
     prevent_default_navigation
         Prevent browser scrolling for wheel, Arrow, PageUp/PageDown, Home/End,
         and Space events while still forwarding them to Matplotlib.
+    borderless
+        Hide the figure title bar and canvas border. Default is True.
 
     Returns
     -------
@@ -227,6 +248,6 @@ def figure_page_html(
         target="body",
         prevent_default_navigation=prevent_default_navigation,
     )
-    head = head_content(core=True)
+    head = head_content(core=True, borderless=borderless)
     resp_html = template(head=head, title="figure", fig=fig_html)
     return resp_html
