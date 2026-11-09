@@ -10,6 +10,8 @@ from matplotlib._pylab_helpers import Gcf
 from matplotlib.figure import Figure
 from matplotlib.pyplot import _get_backend_mod
 
+from mplbed._resize import resolve_resize_options
+
 try:
     from nicegui import ui
     from nicegui.element import Element
@@ -60,13 +62,26 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
     prevent_default_navigation
         Whether to prevent browser scrolling for wheel, Arrow, PageUp/PageDown,
         Home/End, and Space events. Defaults to ``False``.
+    fit
+        ``"none"`` keeps figure size, ``"width"`` fits the element width,
+        and ``"container"`` fills an element with an explicit height.
+    resize_handle
+        Show the manual resize handle. ``None`` shows it only for ``fit="none"``.
     **figure_kwargs
         Keyword arguments forwarded to :class:`matplotlib.figure.Figure`.
     """
 
-    def __init__(self, *, prevent_default_navigation: bool = False, **figure_kwargs: Any) -> None:
+    def __init__(
+        self,
+        *,
+        prevent_default_navigation: bool = False,
+        fit: str = "none",
+        resize_handle: bool | None = None,
+        **figure_kwargs: Any,
+    ) -> None:
         if _setup_state is None:
             raise RuntimeError("Call mplbed.integration.nicegui.setup(app) before creating a matplotlib element.")
+        resize_handle = resolve_resize_options(fit, resize_handle)
 
         super().__init__()
         self._figure = MplbedFigure(self, **figure_kwargs)
@@ -90,6 +105,8 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
             _prefix_and_app=prefix_and_app,
         )
         self._props["preventDefaultNavigation"] = prevent_default_navigation
+        self._props["fit"] = fit
+        self._props["resizeHandle"] = resize_handle
 
     @property
     def figure(self) -> Figure:
@@ -134,7 +151,13 @@ class Matplotlib(Element, component="nicegui.js", default_classes="mplbed-nicegu
         super()._handle_delete()
 
 
-def matplotlib(*, prevent_default_navigation: bool = False, **figure_kwargs: Any) -> Matplotlib:
+def matplotlib(
+    *,
+    prevent_default_navigation: bool = False,
+    fit: str = "none",
+    resize_handle: bool | None = None,
+    **figure_kwargs: Any,
+) -> Matplotlib:
     """Create an interactive Matplotlib element with an owned figure.
 
     Parameters
@@ -142,6 +165,11 @@ def matplotlib(*, prevent_default_navigation: bool = False, **figure_kwargs: Any
     prevent_default_navigation
         Whether to prevent browser scrolling for wheel, Arrow, PageUp/PageDown,
         Home/End, and Space events. Defaults to ``False``.
+    fit
+        ``"none"`` keeps figure size, ``"width"`` fits the element width,
+        and ``"container"`` fills an element with an explicit height.
+    resize_handle
+        Show the manual resize handle. ``None`` shows it only for ``fit="none"``.
     **figure_kwargs
         Keyword arguments forwarded to :class:`matplotlib.figure.Figure`.
 
@@ -152,6 +180,8 @@ def matplotlib(*, prevent_default_navigation: bool = False, **figure_kwargs: Any
     """
     return Matplotlib(
         prevent_default_navigation=prevent_default_navigation,
+        fit=fit,
+        resize_handle=resize_handle,
         **figure_kwargs,
     )
 

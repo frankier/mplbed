@@ -5,6 +5,8 @@ export default {
     websocketUrl: String,
     downloadUrl: String,
     preventDefaultNavigation: Boolean,
+    fit: String,
+    resizeHandle: Boolean,
   },
   mounted() {
     const pathPrefix = window.path_prefix || "";
@@ -15,6 +17,8 @@ export default {
       pathPrefix + this.downloadUrl,
       "remove",
       this.preventDefaultNavigation,
+      this.fit,
+      this.resizeHandle,
     );
   },
   beforeUnmount() {

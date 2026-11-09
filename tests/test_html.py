@@ -1,6 +1,9 @@
 import inspect
 
+import pytest
+
 from mplbed import raw_html, safe_html
+from mplbed._resize import resolve_resize_options
 from mplbed.html import _impl
 from mplbed.integration import django, quart, starlette
 from mplbed.server import mplbed_app_factory
@@ -75,3 +78,37 @@ def test_figure_page_html_passes_borderless_to_head_content(monkeypatch):
     raw_html.figure_page_html(object(), borderless=False)
 
     assert seen == [{"core": True, "borderless": True}, {"core": True, "borderless": False}]
+
+
+@pytest.mark.parametrize(
+    ("fit", "resize_handle", "expected_handle"),
+    [
+        ("none", None, True),
+        ("width", None, False),
+        ("container", None, False),
+        ("none", False, False),
+        ("width", True, True),
+    ],
+)
+def test_figure_html_from_id_serializes_resize_options(fit, resize_handle, expected_handle):
+    html = raw_html.figure_html_from_id(
+        1, fit=fit, resize_handle=resize_handle, prefix_and_app=_prefix_and_app()
+    )
+    assert f'"{fit}",\n        {str(expected_handle).lower()}' in html
+
+
+def test_resize_options_are_validated_before_figure_registration():
+    with pytest.raises(ValueError, match="fit must be"):
+        resolve_resize_options("invalid", None)
+    with pytest.raises(TypeError, match="resize_handle must be"):
+        resolve_resize_options("none", "yes")
+
+
+def test_figure_page_html_passes_resize_options_to_figure(monkeypatch):
+    seen = []
+    monkeypatch.setattr(_impl, "figure_html", lambda *args, **kwargs: seen.append(kwargs) or "<div>plot</div>")
+    monkeypatch.setattr(_impl, "head_content", lambda **kwargs: "assets")
+
+    raw_html.figure_page_html(object(), fit="container", resize_handle=True)
+
+    assert seen == [{"target": "body", "prevent_default_navigation": False, "fit": "container", "resize_handle": True}]

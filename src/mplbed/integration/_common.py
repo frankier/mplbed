@@ -28,6 +28,8 @@ def figure_standalone_docstring_factory(*, response_name, template_comment, is_a
         A matplotlib Figure object or a callable that returns a Figure object.
     {PARAMS_DS.prevent_default_navigation}
     {PARAMS_DS.borderless}
+    {PARAMS_DS.fit}
+    {PARAMS_DS.resize_handle}
     {params_extra}
     """
 
@@ -80,6 +82,8 @@ def figure_page_docstring_factory(*, response_name, template_comment, is_generic
     ----------
     {PARAMS_DS.prevent_default_navigation}
     {PARAMS_DS.borderless}
+    {PARAMS_DS.fit}
+    {PARAMS_DS.resize_handle}
     {params_extra}
     """
 

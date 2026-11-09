@@ -68,5 +68,15 @@ def navigation() -> None:
     ui.html('<div style="height: 80rem">Page content after the plots.</div>')
 
 
+@ui.page("/fit")
+def fit() -> None:
+    """Show both parent-fitting modes in sized NiceGUI elements."""
+    with ui.column():
+        width_plot = matplotlib(fit="width").classes("fit-width").style("width: 600px")
+        width_plot.figure.subplots().plot([1, 2, 3], [1, 2, 3])
+        container_plot = matplotlib(fit="container").classes("fit-container").style("width: 600px; height: 400px")
+        container_plot.figure.subplots().plot([1, 2, 3], [3, 2, 1])
+
+
 if __name__ in {"__main__", "__mp_main__"}:
     ui.run(host="127.0.0.1", port=int(os.environ.get("PORT", 8080)), reload=False, show=False)

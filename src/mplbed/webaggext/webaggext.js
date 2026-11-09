@@ -337,6 +337,8 @@ function new_fig(
     download_fig_uri_str,
     on_close = "msg_discrete",
     should_prevent_default_navigation = false,
+    fit = "none",
+    resize_handle = fit === "none",
 ) {
     let websocket = new window._mpl_webagg_websocket_type(ws_uri_str);
     let fig = new mpl.figure(
@@ -347,11 +349,19 @@ function new_fig(
         // A function called when a file type is selected for download
         download_callback(download_fig_uri_str),
         // The HTML element in which to place the figure
-        target
+        target,
+        fit,
+        resize_handle
     );
     if (should_prevent_default_navigation) {
         prevent_default_navigation(fig);
     }
+    websocket.addEventListener("close", function() {
+        fig.resizeObserverInstance.disconnect();
+        if (fig.fitObserverInstance) {
+            fig.fitObserverInstance.disconnect();
+        }
+    });
     fig.focus_on_mouseover = true;
     let close_cb;
     if (on_close == "msg_discrete") {

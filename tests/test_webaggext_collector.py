@@ -99,7 +99,25 @@ def test_show_forwards_navigation_suppression(monkeypatch, prevent_default_navig
                 "target": "inline",
                 "on_close": "remove",
                 "prevent_default_navigation": prevent_default_navigation,
+                "fit": "none",
+                "resize_handle": True,
             },
         )
     ]
     assert collector.consume_one() == "<figure>"
+
+
+def test_show_forwards_fit_options(monkeypatch):
+    generated = []
+    monkeypatch.setattr(
+        "mplbed.html.raw.figure_html_from_id",
+        lambda fig_id, **kwargs: generated.append(kwargs) or "<figure>",
+    )
+
+    collector = FigureCollector(target="inline", on_close="remove", fit="container", resize_handle=True)
+    with collector:
+        plt.figure()
+        plt.show()
+
+    assert generated[0]["fit"] == "container"
+    assert generated[0]["resize_handle"] is True
