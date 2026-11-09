@@ -24,8 +24,10 @@ non-navigation keys retain their normal browser behavior.
 
 Use `matplotlib(fit="width")` to match the element's width while keeping the
 figure's initial aspect ratio. Use `matplotlib(fit="container").style("height:
-400px")` to fill a sized element. Fitted figures hide the manual resize
-handle by default; `resize_handle=True` shows it.
+400px")` to fill a sized element. The `style(...)` call sets the NiceGUI
+element's height, and `fit="container"` makes the plot fill that element.
+Fitted figures hide the manual resize handle by default;
+`resize_handle=True` shows it.
 
 ## API reference
 
