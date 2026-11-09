@@ -55,4 +55,8 @@ PARAMS_DS: Any = DotAccessDict(
         PageUp/PageDown, Home/End, and Space events directed at the plot.
         Events are still sent to Matplotlib. Default is False.
     """),
+    borderless=fdf("""
+    borderless : bool, optional
+        Hide the figure title bar and canvas border on the page. Default is True.
+    """),
 )

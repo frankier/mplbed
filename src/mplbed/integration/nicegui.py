@@ -165,6 +165,7 @@ def setup(
     manage_routing: bool = True,
     do_use_mpl_backend: bool = True,
     use_webaggext_backend: bool = True,
+    borderless: bool = True,
 ) -> None:
     """Configure a NiceGUI app for interactive mplbed elements.
 
@@ -184,6 +185,8 @@ def setup(
         Whether to select mplbed's Matplotlib backend.
     use_webaggext_backend
         Whether to select WebAggExt instead of Matplotlib's base WebAgg backend.
+    borderless
+        Hide the figure title bar and canvas border. Defaults to ``True``.
     """
     global _setup_state
 
@@ -194,6 +197,7 @@ def setup(
         "manage_routing": manage_routing,
         "do_use_mpl_backend": do_use_mpl_backend,
         "use_webaggext_backend": use_webaggext_backend,
+        "borderless": borderless,
     }
     if _setup_state is not None:
         if _setup_state.app is app and _setup_state.options == options:
@@ -210,9 +214,10 @@ def setup(
         else mplbed_app_factory(**(mplbed_starlette_app_kwargs or {}))
     )
     resolved_options = {**options, "mplbed_starlette_app": resolved_mplbed_app}
+    del resolved_options["borderless"]
     starlette.setup(app, **resolved_options)
     ui.add_head_html(
-        head_content(core=True, prefix_and_app=(prefix, resolved_mplbed_app)),
+        head_content(core=True, prefix_and_app=(prefix, resolved_mplbed_app), borderless=borderless),
         shared=True,
     )
     _setup_state = _SetupState(

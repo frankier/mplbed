@@ -110,6 +110,7 @@ mpl.figure.prototype._init_canvas = function () {
     var fig = this;
 
     var canvas_div = (this.canvas_div = document.createElement('div'));
+    canvas_div.classList.add('mpl-canvas-container');
     canvas_div.setAttribute('tabindex', '0');
     canvas_div.setAttribute(
         'style',

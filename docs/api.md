@@ -50,6 +50,12 @@ Two variants are provided: `mplbed.html.raw` returns plain Python strings,
 while `mplbed.html.safe` returns `markupsafe.Markup` objects safe for direct
 use in Jinja2 templates.
 
+Figure pages are borderless by default: the WebAgg figure-number title bar and
+canvas border are hidden. Pass `borderless=False` to `figure_page` or
+`figure_standalone` to keep the frame. For a manually assembled page, pass
+`borderless=False` to `head_content`. The option applies to every mplbed figure
+on that page. NiceGUI accepts `borderless=False` in `setup`.
+
 ### Raw strings (`mplbed.html.raw`)
 
 ```{eval-rst}
