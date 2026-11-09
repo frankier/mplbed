@@ -288,6 +288,53 @@ def test_canvas_hidden_after_init_refreshes_when_shown(page):
 
 
 @pytest.mark.parametrize("fit", ["width", "container"])
+def test_first_fitted_image_matches_canvas(page, fit):
+    """The first painted image uses the measured parent size."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    page.add_init_script(
+        """window.firstFigurePaint = null;
+        const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+        CanvasRenderingContext2D.prototype.drawImage = function (...args) {
+            if (this.canvas.classList.contains('mpl-canvas') && !window.firstFigurePaint) {
+                const image = args[0];
+                window.firstFigurePaint = [
+                    image.naturalWidth, image.naturalHeight,
+                    this.canvas.width, this.canvas.height,
+                ];
+            }
+            return drawImage.apply(this, args);
+        };"""
+    )
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url + f"?fit={fit}", wait_until="load")
+        page.wait_for_function("window.firstFigurePaint !== null")
+        image_width, image_height, canvas_width, canvas_height = page.evaluate("window.firstFigurePaint")
+        assert (image_width, image_height) == (canvas_width, canvas_height)
+        assert proc.poll() is None
+
+
+def test_fitted_figure_refreshes_without_resize_observation(page):
+    """An unmeasured parent still gets the original figure image."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    page.add_init_script(
+        """window.ResizeObserver = class {
+            observe() {}
+            disconnect() {}
+        };
+        window.figurePainted = false;
+        const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+        CanvasRenderingContext2D.prototype.drawImage = function (...args) {
+            if (this.canvas.classList.contains('mpl-canvas')) window.figurePainted = true;
+            return drawImage.apply(this, args);
+        };"""
+    )
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url + "?fit=container", wait_until="load")
+        page.wait_for_function("window.figurePainted", timeout=15000)
+        assert proc.poll() is None
+
+
+@pytest.mark.parametrize("fit", ["width", "container"])
 def test_figure_fits_parent_after_parent_resize(page, fit):
     """A fitted figure redraws at its parent's new size."""
     spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")

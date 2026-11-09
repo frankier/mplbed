@@ -42,6 +42,7 @@ mpl.figure = function (figure_id, websocket, ondownload, parent_element, fit = '
     this.rubberband_context = undefined;
     this.format_dropdown = undefined;
     this.canvas_has_image = false;
+    this._initial_refresh_timer = null;
 
     this.image_mode = 'full';
 
@@ -73,7 +74,18 @@ mpl.figure = function (figure_id, websocket, ondownload, parent_element, fit = '
                 device_pixel_ratio: fig.ratio,
             });
         }
-        fig.send_message('refresh', {});
+        if (fig.fit === 'none') {
+            fig.send_message('refresh', {});
+        } else {
+            // The first fitted resize will draw at the container's size.
+            // Still show the original figure if no usable size is observed.
+            fig._initial_refresh_timer = window.setTimeout(function () {
+                fig._initial_refresh_timer = null;
+                if (fig.ws.readyState === 1) {
+                    fig.send_message('refresh', {});
+                }
+            }, 1000);
+        }
     };
 
     this.imageObj.onload = function () {
@@ -269,6 +281,10 @@ mpl.figure.prototype._init_canvas = function () {
             // Report backing-store changes to Python. Later same-size
             // hide/show cycles preserve the bitmap without a round trip.
             if (canvas_resized) {
+                if (fig._initial_refresh_timer !== null) {
+                    window.clearTimeout(fig._initial_refresh_timer);
+                    fig._initial_refresh_timer = null;
+                }
                 fig.request_resize(width, height);
             }
             if (canvas_resized && canvas_had_image) {
@@ -514,6 +530,7 @@ mpl.figure.prototype.handle_save = function (fig, _msg) {
 
 mpl.figure.prototype.handle_resize = function (fig, msg) {
     var size = msg['size'];
+    var initial_fit_resize = fig.fit !== 'none' && !fig._fit_ready;
     if (fig.fit !== 'none' && (!fig._fit_ready || msg['forward'])) {
         fig._fit_aspect_ratio = size[0] / size[1];
         if (!fig._fit_ready) {
@@ -529,7 +546,9 @@ mpl.figure.prototype.handle_resize = function (fig, msg) {
     }
     if (size[0] !== fig.canvas.width || size[1] !== fig.canvas.height) {
         fig._resize_canvas(size[0], size[1], msg['forward']);
-        fig.send_message('refresh', {});
+        if (!initial_fit_resize) {
+            fig.send_message('refresh', {});
+        }
     }
 };
 
