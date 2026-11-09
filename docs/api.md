@@ -62,7 +62,8 @@ default `fit="none"` keeps the existing figure size. For `fit="container"`,
 give the containing element an explicit height. The manual resize handle is
 shown by default only with `fit="none"`; pass `resize_handle=True` or `False`
 to override it. These options work with `figure_html`, figure-page helpers,
-and `FigureCollector`.
+and `FigureCollector`. Fitted figures draw at their measured size initially;
+if no size can be measured, the original figure appears after a short delay.
 
 ### Raw strings (`mplbed.html.raw`)
 

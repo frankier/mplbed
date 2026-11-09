@@ -357,6 +357,10 @@ function new_fig(
         prevent_default_navigation(fig);
     }
     websocket.addEventListener("close", function() {
+        if (fig._initial_refresh_timer !== null) {
+            window.clearTimeout(fig._initial_refresh_timer);
+            fig._initial_refresh_timer = null;
+        }
         fig.resizeObserverInstance.disconnect();
         if (fig.fitObserverInstance) {
             fig.fitObserverInstance.disconnect();
