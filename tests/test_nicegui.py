@@ -156,6 +156,23 @@ def test_matplotlib_exposes_navigation_suppression_without_forwarding_it_to_figu
     assert opted_in_plot.figure.get_size_inches().tolist() == [6.0, 4.0]
 
 
+def test_matplotlib_resolves_fit_and_resize_handle_without_forwarding_them_to_figure():
+    integration = nicegui_integration()
+    integration.setup(app)
+
+    with client_context():
+        default_plot = integration.matplotlib()
+        fitted_plot = integration.matplotlib(fit="width", figsize=(6, 4))
+        handled_plot = integration.matplotlib(fit="container", resize_handle=True)
+
+    assert default_plot._props["fit"] == "none"
+    assert default_plot._props["resizeHandle"] is True
+    assert fitted_plot._props["fit"] == "width"
+    assert fitted_plot._props["resizeHandle"] is False
+    assert fitted_plot.figure.get_size_inches().tolist() == [6.0, 4.0]
+    assert handled_plot._props["resizeHandle"] is True
+
+
 def test_update_schedules_a_redraw_and_preserves_element_updates(monkeypatch):
     integration = nicegui_integration()
     integration.setup(app)

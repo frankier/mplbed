@@ -287,6 +287,58 @@ def test_canvas_hidden_after_init_refreshes_when_shown(page):
         assert proc.poll() is None, f"{spec.id} exited early"
 
 
+@pytest.mark.parametrize("fit", ["width", "container"])
+def test_figure_fits_parent_after_parent_resize(page, fit):
+    """A fitted figure redraws at its parent's new size."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url + f"?fit={fit}", wait_until="load")
+        parent = page.locator("#plot-parent")
+        canvas = parent.locator("canvas.mpl-canvas")
+        page.wait_for_function(
+            """() => {
+                const parent = document.querySelector('#plot-parent');
+                const canvas = parent.querySelector('canvas.mpl-canvas');
+                return canvas.clientWidth === parent.clientWidth;
+            }"""
+        )
+        initial_ratio = canvas.evaluate("el => el.clientWidth / el.clientHeight")
+        parent.evaluate("el => { el.style.width = '480px'; el.style.height = '350px'; }")
+        page.wait_for_function(
+            """fit => {
+                const parent = document.querySelector('#plot-parent');
+                const canvas = parent.querySelector('canvas.mpl-canvas');
+                if (canvas.clientWidth !== parent.clientWidth || canvas.clientWidth !== 480) return false;
+                if (Math.abs(canvas.width / window.devicePixelRatio - canvas.clientWidth) > 1) return false;
+                if (Math.abs(canvas.height / window.devicePixelRatio - canvas.clientHeight) > 1) return false;
+                if (fit === 'width') return true;
+                const toolbar = parent.querySelector('.mpl-toolbar');
+                return Math.abs(canvas.clientHeight - (parent.clientHeight - toolbar.offsetHeight)) <= 2;
+            }""",
+            arg=fit,
+        )
+        if fit == "width":
+            assert abs(canvas.evaluate("el => el.clientWidth / el.clientHeight") - initial_ratio) < 0.01
+        page.wait_for_timeout(int(SETTLE_SECONDS * 1000))
+        assert not _is_blank(_canvas_png_bytes(canvas))
+        assert proc.poll() is None
+
+
+@pytest.mark.parametrize(
+    ("query", "expected"),
+    [("", "both"), ("?resize_handle=false", "none"), ("?fit=width", "none"), ("?fit=width&resize_handle=true", "both")],
+)
+def test_resize_handle_option(page, query, expected):
+    """The handle default follows fit mode and explicit overrides work."""
+    spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url + query, wait_until="load")
+        container = page.locator("#plot-parent .mpl-canvas-container")
+        container.wait_for(state="visible")
+        assert container.evaluate("el => getComputedStyle(el).resize") == expected
+        assert proc.poll() is None
+
+
 def test_resize_storm_is_bounded_and_completes_after_each_image(page):
     """Rapid resize observations render the final size without a FIFO backlog."""
     spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
@@ -449,6 +501,32 @@ def _wait_for_canvas_change(page, plot_class, before):
         arg=[f".{plot_class} canvas.mpl-canvas", before],
         timeout=15000,
     )
+
+
+@pytest.mark.parametrize("fit", ["width", "container"])
+def test_nicegui_figure_fits_element_after_resize(page, fit):
+    """NiceGUI forwards fit mode and follows its element's dimensions."""
+    spec = _nicegui_example()
+    with running_example(spec) as (base_url, proc):
+        page.goto(base_url + "/fit", wait_until="load")
+        element = page.locator(f".fit-{fit}")
+        canvas = element.locator("canvas.mpl-canvas")
+        canvas.wait_for(state="visible", timeout=15000)
+        element.evaluate("el => { el.style.width = '480px'; el.style.height = '350px'; }")
+        page.wait_for_function(
+            """fit => {
+                const host = document.querySelector(`.fit-${fit}`);
+                const canvas = host.querySelector('canvas.mpl-canvas');
+                if (canvas.clientWidth !== host.clientWidth || canvas.clientWidth !== 480) return false;
+                if (Math.abs(canvas.width / window.devicePixelRatio - canvas.clientWidth) > 1) return false;
+                if (fit === 'width') return true;
+                const toolbar = host.querySelector('.mpl-toolbar');
+                return Math.abs(canvas.clientHeight - (host.clientHeight - toolbar.offsetHeight)) <= 2;
+            }""",
+            arg=fit,
+        )
+        assert element.locator(".mpl-canvas-container").evaluate("el => getComputedStyle(el).resize") == "none"
+        assert proc.poll() is None
 
 
 def test_nicegui_update_preserves_dom_and_other_figure(page):

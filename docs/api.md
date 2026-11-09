@@ -56,6 +56,14 @@ canvas border are hidden. Pass `borderless=False` to `figure_page` or
 `borderless=False` to `head_content`. The option applies to every mplbed figure
 on that page. NiceGUI accepts `borderless=False` in `setup`.
 
+Figures can follow their containing element with `fit="width"` (preserving
+the initial aspect ratio) or `fit="container"` (filling both dimensions). The
+default `fit="none"` keeps the existing figure size. For `fit="container"`,
+give the containing element an explicit height. The manual resize handle is
+shown by default only with `fit="none"`; pass `resize_handle=True` or `False`
+to override it. These options work with `figure_html`, figure-page helpers,
+and `FigureCollector`.
+
 ### Raw strings (`mplbed.html.raw`)
 
 ```{eval-rst}

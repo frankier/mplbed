@@ -1,3 +1,4 @@
+from mplbed._resize import resolve_resize_options
 from mplbed.asgi import url_path_for
 
 
@@ -8,6 +9,8 @@ def figure_html_from_id(
     on_close="msg_discrete",
     prefix_and_app=None,
     prevent_default_navigation=False,
+    fit="none",
+    resize_handle=None,
 ):
     """Generate embeddable HTML for an existing figure manager.
 
@@ -25,6 +28,13 @@ def figure_html_from_id(
     prevent_default_navigation
         Prevent browser scrolling for wheel, Arrow, PageUp/PageDown, Home/End,
         and Space events while still forwarding them to Matplotlib.
+    fit
+        ``"none"`` keeps the figure size, ``"width"`` fits its parent width
+        while preserving its initial aspect ratio, and ``"container"`` fills
+        its parent. The parent needs an explicit height for ``"container"``.
+    resize_handle
+        Show the browser's manual resize handle. By default, show it only when
+        ``fit="none"``.
 
     Returns
     -------
@@ -33,6 +43,8 @@ def figure_html_from_id(
     """
     from json import dumps
 
+    resize_handle = resolve_resize_options(fit, resize_handle)
+
     ws_uri = url_path_for("websocket", fig_id=fig_id, _prefix_and_app=prefix_and_app)
     ws_uri_str = dumps(ws_uri)
     download_fig_uri = url_path_for("download_fig", fig_id=fig_id, fmt="{fmt}", _prefix_and_app=prefix_and_app)
@@ -40,7 +52,7 @@ def figure_html_from_id(
     container = ""
     setup_container = ""
     if target == "inline":
-        container = "<div></div>"
+        container = '<div style="height: 100%"></div>' if fit == "container" else "<div></div>"
         target_js = "document.currentScript.previousElementSibling"
     elif target == "body":
         target_js = "document.body"
@@ -58,6 +70,8 @@ def figure_html_from_id(
         on_close = ["remove_parent", "dialog"]
     on_close_js = dumps(on_close)
     prevent_default_navigation_js = dumps(prevent_default_navigation)
+    fit_js = dumps(fit)
+    resize_handle_js = dumps(resize_handle)
     create_figure = f"""
     let fig = _mpl_webaggext.new_fig(
         {target_js},
@@ -65,7 +79,9 @@ def figure_html_from_id(
         {ws_uri_str},
         {download_fig_uri_str},
         {on_close_js},
-        {prevent_default_navigation_js}
+        {prevent_default_navigation_js},
+        {fit_js},
+        {resize_handle_js}
     );
     """.strip()
     bits = (
@@ -90,6 +106,8 @@ def figure_html(
     target="inline",
     on_close="msg_discrete",
     prevent_default_navigation=False,
+    fit="none",
+    resize_handle=None,
 ):
     """Register and generate embeddable HTML for a Matplotlib figure.
 
@@ -106,6 +124,13 @@ def figure_html(
     prevent_default_navigation
         Prevent browser scrolling for wheel, Arrow, PageUp/PageDown, Home/End,
         and Space events while still forwarding them to Matplotlib.
+    fit
+        ``"none"`` keeps the figure size, ``"width"`` fits its parent width
+        while preserving its initial aspect ratio, and ``"container"`` fills
+        its parent. The parent needs an explicit height for ``"container"``.
+    resize_handle
+        Show the browser's manual resize handle. By default, show it only when
+        ``fit="none"``.
 
     Returns
     -------
@@ -116,6 +141,7 @@ def figure_html(
 
     from mplbed.server._impl import add_manager
 
+    resize_handle = resolve_resize_options(fit, resize_handle)
     manager = get_backend_mod().new_figure_manager_given_figure(id(figure), figure)
     if hasattr(manager, "add_retains"):
         manager.add_retains(*retains)  # ty: ignore
@@ -129,6 +155,8 @@ def figure_html(
         target=target,
         on_close=on_close,
         prevent_default_navigation=prevent_default_navigation,
+        fit=fit,
+        resize_handle=resize_handle,
     )
 
 
@@ -223,6 +251,8 @@ def figure_page_html(
     template=default_figure_page_template,
     prevent_default_navigation=False,
     borderless=True,
+    fit="none",
+    resize_handle=None,
 ):
     """Generate a complete HTML page containing a Matplotlib figure.
 
@@ -237,6 +267,13 @@ def figure_page_html(
         and Space events while still forwarding them to Matplotlib.
     borderless
         Hide the figure title bar and canvas border. Default is True.
+    fit
+        ``"none"`` keeps the figure size, ``"width"`` fits its parent width
+        while preserving its initial aspect ratio, and ``"container"`` fills
+        its parent. The parent needs an explicit height for ``"container"``.
+    resize_handle
+        Show the browser's manual resize handle. By default, show it only when
+        ``fit="none"``.
 
     Returns
     -------
@@ -247,6 +284,8 @@ def figure_page_html(
         fig,
         target="body",
         prevent_default_navigation=prevent_default_navigation,
+        fit=fit,
+        resize_handle=resize_handle,
     )
     head = head_content(core=True, borderless=borderless)
     resp_html = template(head=head, title="figure", fig=fig_html)

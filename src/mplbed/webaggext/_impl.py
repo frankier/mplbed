@@ -10,12 +10,16 @@ from matplotlib.backends.backend_webagg_core import (
     NavigationToolbar2WebAgg,
 )
 
+from mplbed._resize import resolve_resize_options
+
 
 @dataclass
 class ShowContext:
     target: str
     on_close: str
     prevent_default_navigation: bool = False
+    fit: str = "none"
+    resize_handle: bool | None = None
     global_scope: bool = False
     _new_figs_token: Token | None = field(default=None, init=False, repr=False, compare=False)
     _new_managers: list = field(default_factory=list, init=False, repr=False, compare=False)
@@ -111,6 +115,8 @@ class FigureManagerWebAggExt(FigureManagerWebAgg):
             target=show_context.target,
             on_close=show_context.on_close,
             prevent_default_navigation=show_context.prevent_default_navigation,
+            fit=show_context.fit,
+            resize_handle=show_context.resize_handle,
         )
         add_fig(html)
 
@@ -185,6 +191,11 @@ class FigureCollector:
     prevent_default_navigation
         Prevent browser scrolling for wheel, Arrow, PageUp/PageDown, Home/End,
         and Space events while still forwarding them to Matplotlib.
+    fit
+        ``"none"`` keeps figure size, ``"width"`` fits the parent width,
+        and ``"container"`` fills a parent with an explicit height.
+    resize_handle
+        Show the manual resize handle. ``None`` shows it only for ``fit="none"``.
     global_scope
         Whether to use the process-global collection instead of context-local
         collection.
@@ -196,13 +207,18 @@ class FigureCollector:
         target,
         on_close,
         prevent_default_navigation=False,
+        fit="none",
+        resize_handle=None,
         global_scope=False,
     ):
+        resize_handle = resolve_resize_options(fit, resize_handle)
         self.token = None
         self.show_context = ShowContext(
             target=target,
             on_close=on_close,
             prevent_default_navigation=prevent_default_navigation,
+            fit=fit,
+            resize_handle=resize_handle,
             global_scope=global_scope,
         )
 

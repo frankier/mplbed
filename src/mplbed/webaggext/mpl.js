@@ -13,8 +13,11 @@ mpl.get_websocket_type = function () {
     }
 };
 
-mpl.figure = function (figure_id, websocket, ondownload, parent_element) {
+mpl.figure = function (figure_id, websocket, ondownload, parent_element, fit = 'none', resize_handle = fit === 'none') {
     this.id = figure_id;
+    this.parent_element = parent_element;
+    this.fit = fit;
+    this.resize_handle = resize_handle;
 
     this.ws = websocket;
 
@@ -44,6 +47,12 @@ mpl.figure = function (figure_id, websocket, ondownload, parent_element) {
 
     this.root = document.createElement('div');
     this.root.setAttribute('style', 'display: inline-block');
+    if (fit !== 'none') {
+        this.root.style.width = '100%';
+        if (fit === 'container') {
+            this.root.style.height = '100%';
+        }
+    }
     this._root_extra_style(this.root);
 
     parent_element.appendChild(this.root);
@@ -125,6 +134,10 @@ mpl.figure.prototype._init_canvas = function () {
             'resize: both;' +
             'z-index: 2;'
     );
+    canvas_div.style.resize = this.resize_handle ? 'both' : 'none';
+    if (this.fit !== 'none') {
+        canvas_div.style.boxSizing = 'border-box';
+    }
 
     function on_keyboard_event_closure(name) {
         return function (event) {
@@ -190,6 +203,14 @@ mpl.figure.prototype._init_canvas = function () {
         }
     }
 
+    function content_size(entry) {
+        if (entry.contentBoxSize) {
+            var box = entry.contentBoxSize instanceof Array ? entry.contentBoxSize[0] : entry.contentBoxSize;
+            return [box.inlineSize, box.blockSize];
+        }
+        return [entry.contentRect.width, entry.contentRect.height];
+    }
+
     this.resizeObserverInstance = new this.ResizeObserver(function (entries) {
         // There's no need to resize if the WebSocket is not connected:
         // - If it is still connecting, then we will get an initial resize from
@@ -197,28 +218,13 @@ mpl.figure.prototype._init_canvas = function () {
         // - If it has disconnected, then resizing will clear the canvas and
         //   never get anything back to refill it, so better to not resize and
         //   keep something visible.
-        if (fig.ws.readyState != 1) {
+        if (fig.ws.readyState != 1 || (fig.fit !== 'none' && !fig._fit_ready)) {
             return;
         }
         var nentries = entries.length;
         for (var i = 0; i < nentries; i++) {
             var entry = entries[i];
-            var width, height;
-            if (entry.contentBoxSize) {
-                if (entry.contentBoxSize instanceof Array) {
-                    // Chrome 84 implements new version of spec.
-                    width = entry.contentBoxSize[0].inlineSize;
-                    height = entry.contentBoxSize[0].blockSize;
-                } else {
-                    // Firefox implements old version of spec.
-                    width = entry.contentBoxSize.inlineSize;
-                    height = entry.contentBoxSize.blockSize;
-                }
-            } else {
-                // Chrome <84 implements even older version of spec.
-                width = entry.contentRect.width;
-                height = entry.contentRect.height;
-            }
+            var [width, height] = content_size(entry);
 
             // Hidden elements report a zero-sized box. Writing that size to
             // the canvas would clear its bitmap, so wait for a visible size.
@@ -274,6 +280,44 @@ mpl.figure.prototype._init_canvas = function () {
         }
     });
     this.resizeObserverInstance.observe(canvas_div);
+
+    this._apply_fit = function (width, height) {
+        if (fig.ws.readyState != 1 || width <= 0 || (fig.fit === 'container' && height <= 0)) {
+            return;
+        }
+        width = Math.floor(width);
+        if (fig.fit === 'width') {
+            height = Math.round(width / fig._fit_aspect_ratio);
+        } else {
+            height = Math.floor(
+                height - fig.header.parentElement.getBoundingClientRect().height - fig.toolbar.getBoundingClientRect().height
+            );
+        }
+        if (width < 1 || height < 1) {
+            return;
+        }
+        if (canvas_div.style.width !== width + 'px') {
+            canvas_div.style.width = width + 'px';
+        }
+        if (canvas_div.style.height !== height + 'px') {
+            canvas_div.style.height = height + 'px';
+        }
+    };
+    if (this.fit !== 'none') {
+        this.fitObserverInstance = new this.ResizeObserver(function (entries) {
+            if (!fig._fit_ready) {
+                return;
+            }
+            for (var entry of entries) {
+                if (entry.target === fig.parent_element) {
+                    fig._fit_parent_size = content_size(entry);
+                }
+            }
+            if (fig._fit_parent_size) {
+                fig._apply_fit(fig._fit_parent_size[0], fig._fit_parent_size[1]);
+            }
+        });
+    }
 
     function on_mouse_event_closure(name) {
         /* User Agent sniffing is bad, but WebKit is busted:
@@ -343,7 +387,7 @@ mpl.figure.prototype._init_canvas = function () {
     this.rubberband_context.strokeStyle = '#000000';
 
     this._resize_canvas = function (width, height, forward) {
-        if (forward) {
+        if (forward && fig.fit === 'none') {
             canvas_div.style.width = width + 'px';
             canvas_div.style.height = height + 'px';
         }
@@ -368,6 +412,7 @@ mpl.figure.prototype._init_toolbar = function () {
 
     var toolbar = document.createElement('div');
     toolbar.classList = 'mpl-toolbar';
+    this.toolbar = toolbar;
     this.root.appendChild(toolbar);
 
     function on_click_closure(name) {
@@ -469,6 +514,19 @@ mpl.figure.prototype.handle_save = function (fig, _msg) {
 
 mpl.figure.prototype.handle_resize = function (fig, msg) {
     var size = msg['size'];
+    if (fig.fit !== 'none' && (!fig._fit_ready || msg['forward'])) {
+        fig._fit_aspect_ratio = size[0] / size[1];
+        if (!fig._fit_ready) {
+            fig._fit_ready = true;
+            fig.fitObserverInstance.observe(fig.parent_element);
+            if (fig.fit === 'container') {
+                fig.fitObserverInstance.observe(fig.toolbar);
+                fig.fitObserverInstance.observe(fig.header.parentElement);
+            }
+        } else if (fig._fit_parent_size) {
+            fig._apply_fit(fig._fit_parent_size[0], fig._fit_parent_size[1]);
+        }
+    }
     if (size[0] !== fig.canvas.width || size[1] !== fig.canvas.height) {
         fig._resize_canvas(size[0], size[1], msg['forward']);
         fig.send_message('refresh', {});

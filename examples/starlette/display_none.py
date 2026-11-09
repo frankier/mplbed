@@ -15,7 +15,16 @@ def homepage(request):
     ax.scatter([1, 2, 3], [1, 4, 2], color="red", s=200)
     initially_hidden = "initially-hidden" in request.query_params
     hidden_after_init = "hidden-after-init" in request.query_params
-    parent_style = ' style="display: none"' if initially_hidden else ""
+    fit = request.query_params.get("fit", "none")
+    resize_handle = request.query_params.get("resize_handle")
+    if resize_handle is not None:
+        resize_handle = resize_handle == "true"
+    styles = ["display: none"] if initially_hidden else []
+    if fit != "none":
+        styles.append("width: 600px")
+    if fit == "container":
+        styles.append("height: 400px")
+    parent_style = f' style="{"; ".join(styles)}"' if styles else ""
     button_label = "Show plot" if initially_hidden or hidden_after_init else "Hide plot"
     hide_after_init = (
         '<script>document.getElementById("plot-parent").style.display = "none";</script>'
@@ -33,7 +42,7 @@ def homepage(request):
   <body>
     <button id="toggle-plot" type="button">{button_label}</button>
     <div id="plot-parent"{parent_style}>
-      {raw_html.figure_html(fig)}
+      {raw_html.figure_html(fig, fit=fit, resize_handle=resize_handle)}
     </div>
     {hide_after_init}
     <script>

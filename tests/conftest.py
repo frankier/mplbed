@@ -63,7 +63,7 @@ EXAMPLES = [
         subdir="nicegui",
         file="basic.py",
         kind="script",
-        routes=("/", "/navigation"),
+        routes=("/", "/navigation", "/fit"),
     ),
 ]
 

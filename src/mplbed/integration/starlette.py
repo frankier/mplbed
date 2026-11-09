@@ -26,7 +26,9 @@ def _require_native_app(app=None):
     return app
 
 
-async def _figure_page_html_jinja(fig, *, template, app=None, prevent_default_navigation=False, borderless=True):
+async def _figure_page_html_jinja(
+    fig, *, template, app=None, prevent_default_navigation=False, borderless=True, fit="none", resize_handle=None
+):
     from mplbed.html.safe import figure_html
 
     app = _require_native_app(app)
@@ -34,6 +36,8 @@ async def _figure_page_html_jinja(fig, *, template, app=None, prevent_default_na
         fig,
         target="body",
         prevent_default_navigation=prevent_default_navigation,
+        fit=fit,
+        resize_handle=resize_handle,
     )
     return await app.render_template(
         template,

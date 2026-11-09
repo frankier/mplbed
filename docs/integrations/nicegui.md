@@ -22,6 +22,11 @@ plot = matplotlib(prevent_default_navigation=True)
 This covers wheel, Arrow, PageUp/PageDown, Home/End, and Space events. Tab and
 non-navigation keys retain their normal browser behavior.
 
+Use `matplotlib(fit="width")` to match the element's width while keeping the
+figure's initial aspect ratio. Use `matplotlib(fit="container").style("height:
+400px")` to fill a sized element. Fitted figures hide the manual resize
+handle by default; `resize_handle=True` shows it.
+
 ## API reference
 
 ```{eval-rst}
@@ -42,7 +47,8 @@ non-navigation keys retain their normal browser behavior.
 
 Creates two client-owned figures, updates one independently, and demonstrates
 that standard NiceGUI classes and layout containers remain available. Its
-``/navigation`` page demonstrates opt-in browser navigation suppression.
+``/navigation`` page demonstrates opt-in browser navigation suppression, and
+``/fit`` shows both parent-fitting modes.
 
 ```{literalinclude} ../../examples/nicegui/basic.py
 :language: python

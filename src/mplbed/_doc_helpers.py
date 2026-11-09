@@ -59,4 +59,14 @@ PARAMS_DS: Any = DotAccessDict(
     borderless : bool, optional
         Hide the figure title bar and canvas border on the page. Default is True.
     """),
+    fit=fdf("""
+    fit : {"none", "width", "container"}, optional
+        Fit the parent width or both dimensions. ``"container"`` requires a
+        parent with an explicit height. Default is ``"none"``.
+    """),
+    resize_handle=fdf("""
+    resize_handle : bool or None, optional
+        Show the figure's manual resize handle. ``None`` (default) shows it
+        when ``fit="none"`` and hides it for the fit modes.
+    """),
 )
