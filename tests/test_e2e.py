@@ -291,8 +291,26 @@ def test_canvas_hidden_after_init_refreshes_when_shown(page):
 def test_first_fitted_image_matches_canvas(page, fit):
     """The first painted image uses the measured parent size."""
     spec = next(s for s in EXAMPLES if s.id == "starlette-display_none")
+    sent_resizes = []
+
+    def record_resize(frame):
+        message = json.loads(frame)
+        if message["type"] == "resize":
+            sent_resizes.append((message["width"], message["height"]))
+
+    page.on("websocket", lambda ws: ws.on("framesent", record_resize))
     page.add_init_script(
-        """window.firstFigurePaint = null;
+        """const observe = ResizeObserver.prototype.observe;
+        ResizeObserver.prototype.observe = function (target, options) {
+            if (target.matches('#plot-parent > div')) {
+                // Give the canvas observer a layout pass before the first parent measurement.
+                target.querySelector('.mpl-canvas-container').style.height = '200px';
+                requestAnimationFrame(() => requestAnimationFrame(() => observe.call(this, target, options)));
+            } else {
+                observe.call(this, target, options);
+            }
+        };
+        window.firstFigurePaint = null;
         const drawImage = CanvasRenderingContext2D.prototype.drawImage;
         CanvasRenderingContext2D.prototype.drawImage = function (...args) {
             if (this.canvas.classList.contains('mpl-canvas') && !window.firstFigurePaint) {
@@ -309,7 +327,9 @@ def test_first_fitted_image_matches_canvas(page, fit):
         page.goto(base_url + f"?fit={fit}", wait_until="load")
         page.wait_for_function("window.firstFigurePaint !== null")
         image_width, image_height, canvas_width, canvas_height = page.evaluate("window.firstFigurePaint")
+        assert sent_resizes[0] == (canvas_width, canvas_height)
         assert (image_width, image_height) == (canvas_width, canvas_height)
+        assert image_height > 200
         assert proc.poll() is None
 
 

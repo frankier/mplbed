@@ -223,6 +223,7 @@ mpl.figure.prototype._init_canvas = function () {
         return [entry.contentRect.width, entry.contentRect.height];
     }
 
+    var initial_fit_pending = this.fit !== 'none';
     this.resizeObserverInstance = new this.ResizeObserver(function (entries) {
         // There's no need to resize if the WebSocket is not connected:
         // - If it is still connecting, then we will get an initial resize from
@@ -230,7 +231,7 @@ mpl.figure.prototype._init_canvas = function () {
         // - If it has disconnected, then resizing will clear the canvas and
         //   never get anything back to refill it, so better to not resize and
         //   keep something visible.
-        if (fig.ws.readyState != 1 || (fig.fit !== 'none' && !fig._fit_ready)) {
+        if (fig.ws.readyState != 1) {
             return;
         }
         var nentries = entries.length;
@@ -278,9 +279,10 @@ mpl.figure.prototype._init_canvas = function () {
                 rubberband_canvas.setAttribute('height', rubberband_height);
             }
 
-            // Report backing-store changes to Python. Later same-size
-            // hide/show cycles preserve the bitmap without a round trip.
-            if (canvas_resized) {
+            // Report the first fitted size even if it matches the default
+            // canvas bitmap. Later same-size hide/show cycles need no request.
+            if (canvas_resized || initial_fit_pending) {
+                initial_fit_pending = false;
                 if (fig._initial_refresh_timer !== null) {
                     window.clearTimeout(fig._initial_refresh_timer);
                     fig._initial_refresh_timer = null;
@@ -295,7 +297,6 @@ mpl.figure.prototype._init_canvas = function () {
             }
         }
     });
-    this.resizeObserverInstance.observe(canvas_div);
 
     this._apply_fit = function (width, height) {
         if (fig.ws.readyState != 1 || width <= 0 || (fig.fit === 'container' && height <= 0)) {
@@ -318,6 +319,10 @@ mpl.figure.prototype._init_canvas = function () {
         if (canvas_div.style.height !== height + 'px') {
             canvas_div.style.height = height + 'px';
         }
+        if (initial_fit_pending) {
+            // Wait for fitted dimensions before observing the canvas box.
+            fig.resizeObserverInstance.observe(canvas_div);
+        }
     };
     if (this.fit !== 'none') {
         this.fitObserverInstance = new this.ResizeObserver(function (entries) {
@@ -333,6 +338,8 @@ mpl.figure.prototype._init_canvas = function () {
                 fig._apply_fit(fig._fit_parent_size[0], fig._fit_parent_size[1]);
             }
         });
+    } else {
+        this.resizeObserverInstance.observe(canvas_div);
     }
 
     function on_mouse_event_closure(name) {
